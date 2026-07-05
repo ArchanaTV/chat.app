@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { User, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
-import Logo from "../components/Logo.jsx";
-import AuthOceanScene from "../components/AuthOceanScene.jsx";
+import AuthCard from "../components/AuthCard.jsx";
+import useComingSoonToast from "../hooks/useComingSoonToast.jsx";
 
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ username: "", email: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { toast, show } = useComingSoonToast();
 
   const update = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
@@ -28,67 +31,88 @@ export default function Register() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
-      <AuthOceanScene />
-      <form
-        onSubmit={handleSubmit}
-        className="relative z-10 w-full max-w-sm animate-fade-in rounded-2xl bg-white p-8 shadow-xl dark:bg-gray-900"
-      >
-        <Link to="/login" className="mb-3 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-brand-600 dark:text-gray-400">
-          ← Back
-        </Link>
-        <Logo size={36} showText={false} className="mb-1" />
-        <h1 className="mb-1 text-2xl font-bold text-brand-600">ChatWave</h1>
-        <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">Create an account to start chatting.</p>
-
+    <AuthCard title="Join ChatWave!" subtitle="Create an account to start chatting">
+      {toast}
+      <form onSubmit={handleSubmit}>
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
-            {error}
-          </div>
+          <div className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>
         )}
 
-        <label className="mb-1 block text-sm font-medium">Username</label>
-        <input
-          className="mb-4 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 outline-none focus:border-brand-500 dark:border-gray-700"
-          value={form.username}
-          onChange={update("username")}
-          minLength={3}
-          required
-        />
+        <div className="mb-3 flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-4 py-3">
+          <User size={18} className="text-gray-400" />
+          <input
+            className="w-full bg-transparent text-sm outline-none"
+            placeholder="Username"
+            value={form.username}
+            onChange={update("username")}
+            minLength={3}
+            required
+          />
+        </div>
 
-        <label className="mb-1 block text-sm font-medium">Email</label>
-        <input
-          type="email"
-          className="mb-4 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 outline-none focus:border-brand-500 dark:border-gray-700"
-          value={form.email}
-          onChange={update("email")}
-          required
-        />
+        <div className="mb-3 flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-4 py-3">
+          <Mail size={18} className="text-gray-400" />
+          <input
+            type="email"
+            className="w-full bg-transparent text-sm outline-none"
+            placeholder="Email"
+            value={form.email}
+            onChange={update("email")}
+            required
+          />
+        </div>
 
-        <label className="mb-1 block text-sm font-medium">Password</label>
-        <input
-          type="password"
-          className="mb-6 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 outline-none focus:border-brand-500 dark:border-gray-700"
-          value={form.password}
-          onChange={update("password")}
-          minLength={6}
-          required
-        />
+        <div className="mb-5 flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-4 py-3">
+          <Lock size={18} className="text-gray-400" />
+          <input
+            type={showPassword ? "text" : "password"}
+            className="w-full bg-transparent text-sm outline-none"
+            placeholder="Password"
+            value={form.password}
+            onChange={update("password")}
+            minLength={6}
+            required
+          />
+          <button type="button" onClick={() => setShowPassword((s) => !s)} className="text-gray-400">
+            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+          </button>
+        </div>
 
         <button
           disabled={loading}
-          className="w-full rounded-lg bg-brand-600 py-2 font-medium text-white transition hover:bg-brand-700 disabled:opacity-60"
+          className="w-full rounded-full py-3 font-medium text-white shadow-md transition hover:opacity-90 disabled:opacity-60"
+          style={{ background: "linear-gradient(135deg, #9b7ee8, #7f6ae0)" }}
         >
           {loading ? "Creating account..." : "Sign Up"}
         </button>
 
-        <p className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
+        <div className="my-5 flex items-center gap-3">
+          <div className="h-px flex-1 bg-gray-200" />
+          <span className="text-xs text-gray-400">or continue with</span>
+          <div className="h-px flex-1 bg-gray-200" />
+        </div>
+
+        <div className="flex justify-center gap-3">
+          {["Google", "Apple", "Facebook"].map((provider) => (
+            <button
+              key={provider}
+              type="button"
+              onClick={() => show(`Sign up with ${provider} is coming soon!`)}
+              title={provider}
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 text-sm font-semibold text-gray-500 shadow-sm transition hover:bg-gray-50"
+            >
+              {provider[0]}
+            </button>
+          ))}
+        </div>
+
+        <p className="mt-5 text-center text-sm text-gray-500">
           Already have an account?{" "}
-          <Link to="/login" className="font-medium text-brand-600 hover:underline">
+          <Link to="/login" className="font-medium text-purple-600 hover:underline">
             Log in
           </Link>
         </p>
       </form>
-    </div>
+    </AuthCard>
   );
 }
