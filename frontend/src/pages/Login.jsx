@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import Logo from "../components/Logo.jsx";
+import AuthOceanScene from "../components/AuthOceanScene.jsx";
 
 export default function Login() {
   const { login } = useAuth();
@@ -26,10 +27,11 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 to-white px-4 dark:from-gray-950 dark:to-gray-900">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+      <AuthOceanScene />
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm animate-fade-in rounded-2xl bg-white p-8 shadow-xl dark:bg-gray-900"
+        className="relative z-10 w-full max-w-sm animate-fade-in rounded-2xl bg-white p-8 shadow-xl dark:bg-gray-900"
       >
         <Logo size={36} showText={false} className="mb-1" />
         <h1 className="mb-1 text-2xl font-bold text-brand-600">ChatWave</h1>

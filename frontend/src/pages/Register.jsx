@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import Logo from "../components/Logo.jsx";
+import AuthOceanScene from "../components/AuthOceanScene.jsx";
 
 export default function Register() {
   const { register } = useAuth();
@@ -27,10 +28,11 @@ export default function Register() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-50 to-white px-4 dark:from-gray-950 dark:to-gray-900">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
+      <AuthOceanScene />
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm animate-fade-in rounded-2xl bg-white p-8 shadow-xl dark:bg-gray-900"
+        className="relative z-10 w-full max-w-sm animate-fade-in rounded-2xl bg-white p-8 shadow-xl dark:bg-gray-900"
       >
         <Link to="/login" className="mb-3 inline-flex items-center gap-1 text-sm text-gray-500 hover:text-brand-600 dark:text-gray-400">
           ← Back
