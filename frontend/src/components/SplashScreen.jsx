@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import TortoiseArt from "./TortoiseArt.jsx";
 
 // Full-screen intro animation shown once when the app first loads.
 // The tortoise itself is drawn entirely in code (SVG shapes), not an image,
@@ -127,26 +128,12 @@ export default function SplashScreen({ onDone }) {
 
         {/* the hand-drawn tortoise, swimming in then settling with a bounce */}
         <div className={`splash-tortoise-wrap ${phase !== "swim" ? "splash-tortoise-settled" : ""}`}>
-          <svg width="190" height="140" viewBox="0 0 200 140">
-            {/* tail */}
-            <path className="tail-fin" d="M55,71 L35,60 L38,71 L35,82 Z" fill="#3f9c6b" />
-            {/* bottom flipper (drawn first so the shell overlaps its base) */}
-            <path className="flipper-bottom" d="M138,92 Q112,108 96,128 Q118,120 138,100 Z" fill="#4caf6b" />
-            {/* shell */}
-            <ellipse cx="102" cy="70" rx="58" ry="37" fill="#1f6b4a" />
-            <path d="M58,58 Q102,40 146,58" stroke="#3f9c6b" strokeWidth="3" fill="none" strokeLinecap="round" />
-            <path d="M52,78 Q102,98 152,78" stroke="#3f9c6b" strokeWidth="3" fill="none" strokeLinecap="round" />
-            <path d="M102,35 L102,105" stroke="#3f9c6b" strokeWidth="2.5" fill="none" opacity="0.7" />
-            {/* underbelly hint */}
-            <ellipse cx="102" cy="96" rx="46" ry="12" fill="#eef2c0" opacity="0.5" />
-            {/* top flipper (drawn after shell so it appears to stroke over the top) */}
-            <path className="flipper-top" d="M138,50 Q112,32 96,12 Q118,20 138,42 Z" fill="#4caf6b" />
-            {/* head */}
-            <circle cx="163" cy="58" r="21" fill="#4fae6f" />
-            <circle cx="171" cy="51" r="3.2" fill="#1b1b1b" />
-            <circle cx="172" cy="49.5" r="1" fill="#ffffff" />
-            <path d="M156,66 Q166,73 177,64" stroke="#1b1b1b" strokeWidth="2" fill="none" strokeLinecap="round" />
-          </svg>
+          <TortoiseArt
+            width={190}
+            flipperTopClass="flipper-top"
+            flipperBottomClass="flipper-bottom"
+            tailClass="tail-fin"
+          />
         </div>
 
         {/* soft wave beneath the tortoise */}
