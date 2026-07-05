@@ -1,0 +1,157 @@
+import jwt from "jsonwebtoken";
+import User from "../models/User.js";
+import Message, { buildConversationId } from "../models/Message.js";
+
+// Maps a userId -> Set of socket ids (a user can have multiple tabs/devices open)
+const onlineUsers = new Map();
+
+const addSocket = (userId, socketId) => {
+  if (!onlineUsers.has(userId)) onlineUsers.set(userId, new Set());
+  onlineUsers.get(userId).add(socketId);
+};
+
+const removeSocket = (userId, socketId) => {
+  const set = onlineUsers.get(userId);
+  if (!set) return false;
+  set.delete(socketId);
+  if (set.size === 0) {
+    onlineUsers.delete(userId);
+    return true; // fully offline now
+  }
+  return false;
+};
+
+export const initSocket = (io) => {
+  // Authenticate every socket connection using the JWT sent in the handshake
+  io.use((socket, next) => {
+    try {
+      const token = socket.handshake.auth?.token;
+      if (!token) return next(new Error("No token provided"));
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      socket.userId = decoded.id;
+      next();
+    } catch (err) {
+      next(new Error("Authentication failed"));
+    }
+  });
+
+  io.on("connection", async (socket) => {
+    const { userId } = socket;
+    addSocket(userId, socket.id);
+    socket.join(userId); // personal room, used to push events to this user across devices
+
+    await User.findByIdAndUpdate(userId, { isOnline: true });
+    io.emit("presence:update", { userId, isOnline: true });
+
+    // ---- Send message ----
+    socket.on("message:send", async (payload, ack) => {
+      try {
+        const { receiverId, type = "text", text = "", fileUrl = "", fileName = "", fileSize = 0, replyTo = null } = payload;
+        const conversationId = buildConversationId(userId, receiverId);
+
+        const message = await Message.create({
+          sender: userId,
+          receiver: receiverId,
+          conversationId,
+          type,
+          text,
+          fileUrl,
+          fileName,
+          fileSize,
+          replyTo,
+        });
+        const populated = await message.populate([
+          { path: "replyTo" },
+          { path: "sender", select: "username avatarUrl" },
+        ]);
+
+        io.to(receiverId).emit("message:new", populated);
+        io.to(userId).emit("message:new", populated); // echo back to sender's other devices
+        ack?.({ status: "ok", message: populated });
+      } catch (err) {
+        ack?.({ status: "error", error: err.message });
+      }
+    });
+
+    // ---- Typing indicator ----
+    socket.on("typing:start", ({ receiverId }) => {
+      io.to(receiverId).emit("typing:update", { userId, isTyping: true });
+    });
+    socket.on("typing:stop", ({ receiverId }) => {
+      io.to(receiverId).emit("typing:update", { userId, isTyping: false });
+    });
+
+    // ---- Read receipts ----
+    socket.on("message:seen", async ({ friendId }) => {
+      const conversationId = buildConversationId(userId, friendId);
+      await Message.updateMany(
+        { conversationId, receiver: userId, seen: false },
+        { seen: true, seenAt: new Date() }
+      );
+      io.to(friendId).emit("message:seenUpdate", { by: userId, conversationId });
+    });
+
+    // ---- Reactions ----
+    socket.on("message:react", async ({ messageId, receiverId, emoji }) => {
+      try {
+        const message = await Message.findById(messageId);
+        if (!message) return;
+        const existingIndex = message.reactions.findIndex(
+          (r) => r.user.toString() === userId && r.emoji === emoji
+        );
+        if (existingIndex >= 0) message.reactions.splice(existingIndex, 1);
+        else message.reactions.push({ emoji, user: userId });
+        await message.save();
+
+        io.to(receiverId).emit("message:reactionUpdate", { messageId, reactions: message.reactions });
+        io.to(userId).emit("message:reactionUpdate", { messageId, reactions: message.reactions });
+      } catch (err) {
+        // silently ignore malformed reaction events
+      }
+    });
+
+    // ---- Mood updates (broadcast to everyone; frontend only displays for friends) ----
+    socket.on("mood:update", ({ mood }) => {
+      io.emit("mood:update", { userId, mood });
+    });
+
+    // ---- Delete message (real-time notify) ----
+    socket.on("message:delete", ({ messageId, receiverId, forEveryone }) => {
+      io.to(receiverId).emit("message:deleted", { messageId, forEveryone });
+      io.to(userId).emit("message:deleted", { messageId, forEveryone });
+    });
+
+    // ---- Disconnect ----
+    socket.on("disconnect", async () => {
+      const fullyOffline = removeSocket(userId, socket.id);
+      if (fullyOffline) {
+        const lastSeen = new Date();
+        await User.findByIdAndUpdate(userId, { isOnline: false, lastSeen });
+        io.emit("presence:update", { userId, isOnline: false, lastSeen });
+      }
+    });
+  });
+};
+
+// Polls for scheduled messages whose delivery time has arrived and pushes them
+// out over sockets, exactly like a normal real-time message. Call this once at
+// server startup with the same `io` instance used above.
+export const startScheduledMessageWorker = (io, intervalMs = 15000) => {
+  setInterval(async () => {
+    try {
+      const due = await Message.find({ delivered: false, scheduledFor: { $lte: new Date() } });
+      for (const message of due) {
+        message.delivered = true;
+        await message.save();
+        const populated = await message.populate([
+          { path: "replyTo" },
+          { path: "sender", select: "username avatarUrl" },
+        ]);
+        io.to(message.receiver.toString()).emit("message:new", populated);
+        io.to(message.sender.toString()).emit("message:new", populated);
+      }
+    } catch (err) {
+      console.error("Scheduled message worker error:", err.message);
+    }
+  }, intervalMs);
+};
