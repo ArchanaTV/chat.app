@@ -3,8 +3,7 @@ import api from "../api/axios.js";
 import { useSocket } from "../context/SocketContext.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 import ChatWindow from "../components/ChatWindow.jsx";
-import OceanBackground from "../components/OceanBackground.jsx";
-import CompanionTortoise from "../components/CompanionTortoise.jsx";
+import AmbientGlowBackground from "../components/AmbientGlowBackground.jsx";
 
 export default function Chat() {
   const { socket } = useSocket();
@@ -76,8 +75,7 @@ export default function Chat() {
 
   return (
     <div className="relative flex h-screen w-full overflow-hidden">
-      <OceanBackground />
-      <CompanionTortoise />
+      <AmbientGlowBackground />
       <div className={`${activeFriend ? "hidden md:flex" : "flex"} h-full`}>
         <Sidebar
           friends={friends}

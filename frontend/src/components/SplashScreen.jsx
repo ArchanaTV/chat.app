@@ -1,18 +1,15 @@
 import { useEffect, useState } from "react";
-import TortoiseArt from "./TortoiseArt.jsx";
 
-// Full-screen intro animation shown once when the app first loads.
-// The tortoise itself is drawn entirely in code (SVG shapes), not an image,
-// so its flippers can actually move. Sequence: swim in from the left with
-// bubbles + a growing wave -> settle with a bounce -> "ChatWave" fades in
-// below it -> short pause -> everything fades out to reveal the app.
+// A quick, elegant dark-glass intro shown once when the app loads: a glowing
+// gradient ring draws itself in, a frosted glass panel fades up behind the
+// wordmark, then everything fades out to reveal the app.
 export default function SplashScreen({ onDone }) {
-  const [phase, setPhase] = useState("swim"); // swim -> settled -> fadeOut -> (unmount)
+  const [phase, setPhase] = useState("in"); // in -> hold -> out
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase("settled"), 2400); // tortoise has arrived + bounced
-    const t2 = setTimeout(() => setPhase("fadeOut"), 4400); // after a short pause
-    const t3 = setTimeout(() => onDone?.(), 5000); // fully gone, show the app
+    const t1 = setTimeout(() => setPhase("hold"), 1200);
+    const t2 = setTimeout(() => setPhase("out"), 2000);
+    const t3 = setTimeout(() => onDone?.(), 2600);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -20,134 +17,70 @@ export default function SplashScreen({ onDone }) {
     };
   }, [onDone]);
 
-  const bubbles = [
-    { left: "38%", delay: "0.2s", size: 10 },
-    { left: "46%", delay: "0.6s", size: 7 },
-    { left: "55%", delay: "1.0s", size: 12 },
-    { left: "43%", delay: "1.4s", size: 8 },
-    { left: "50%", delay: "1.8s", size: 9 },
-  ];
-
   return (
     <div
-      className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-white"
-      style={{ opacity: phase === "fadeOut" ? 0 : 1, transition: "opacity 0.6s ease-out" }}
+      className="fixed inset-0 z-[999] flex items-center justify-center"
+      style={{
+        background: "radial-gradient(circle at 50% 40%, #1c2340 0%, #0a0e1f 70%)",
+        opacity: phase === "out" ? 0 : 1,
+        transition: "opacity 0.6s ease-out",
+      }}
     >
       <style>{`
-        @keyframes splashSwim {
-          0%   { transform: translateX(-70vw) rotate(-4deg); opacity: 0; }
-          10%  { opacity: 1; }
-          60%  { transform: translateX(4%) rotate(2deg); }
-          80%  { transform: translateX(-1%) rotate(-1deg); }
-          100% { transform: translateX(0) rotate(0deg); }
+        @keyframes splashRingDraw {
+          0%   { stroke-dashoffset: 300; opacity: 0; }
+          15%  { opacity: 1; }
+          100% { stroke-dashoffset: 0; opacity: 1; }
         }
-        @keyframes splashBounce {
-          0%   { transform: scale(1); }
-          30%  { transform: scale(1.07); }
-          55%  { transform: scale(0.97); }
-          100% { transform: scale(1); }
+        @keyframes splashGlassFade {
+          0%   { opacity: 0; transform: scale(0.92); }
+          100% { opacity: 1; transform: scale(1); }
         }
         @keyframes splashGlow {
-          0%, 100% { opacity: 0.35; }
-          50%      { opacity: 0.6; }
+          0%, 100% { opacity: 0.5; }
+          50%      { opacity: 0.9; }
         }
-        @keyframes splashBubbleRise {
-          0%   { transform: translateY(0) scale(0.4); opacity: 0; }
-          20%  { opacity: 0.8; }
-          100% { transform: translateY(-90px) scale(1); opacity: 0; }
-        }
-        @keyframes splashWaveGrow {
-          0%   { transform: scaleX(0); opacity: 0; }
-          100% { transform: scaleX(1); opacity: 1; }
-        }
-        @keyframes splashTextFade {
-          0%   { transform: translateY(16px); opacity: 0; }
-          100% { transform: translateY(0); opacity: 1; }
-        }
-        @keyframes flipperTop {
-          0%, 100% { transform: rotate(-8deg); }
-          50%      { transform: rotate(22deg); }
-        }
-        @keyframes flipperBottom {
-          0%, 100% { transform: rotate(8deg); }
-          50%      { transform: rotate(-22deg); }
-        }
-        @keyframes tailWag {
-          0%, 100% { transform: rotate(-6deg); }
-          50%      { transform: rotate(6deg); }
-        }
-        .splash-tortoise-wrap {
-          animation: splashSwim 2.4s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
-        }
-        .splash-tortoise-settled {
-          animation: splashBounce 0.5s ease-out forwards;
-        }
-        .splash-glow {
-          animation: splashGlow 2.4s ease-in-out infinite;
-        }
-        .splash-bubble {
-          position: absolute;
-          bottom: 42%;
-          border-radius: 9999px;
-          background: radial-gradient(circle at 30% 30%, #cdeffd, #7fd4f0);
-          animation: splashBubbleRise 2.2s ease-out infinite;
-        }
-        .splash-wave {
-          transform-origin: center;
-          animation: splashWaveGrow 1.2s ease-out 1.1s forwards;
-          opacity: 0;
-        }
-        .splash-title {
-          animation: splashTextFade 0.7s ease-out 2.5s forwards;
-          opacity: 0;
-        }
-        .flipper-top { transform-origin: 138px 50px; animation: flipperTop 0.9s ease-in-out infinite; }
-        .flipper-bottom { transform-origin: 138px 92px; animation: flipperBottom 0.9s ease-in-out infinite; }
-        .tail-fin { transform-origin: 55px 71px; animation: tailWag 0.9s ease-in-out infinite; }
+        .splash-ring { animation: splashRingDraw 1s cubic-bezier(0.22, 0.61, 0.36, 1) forwards; }
+        .splash-glass { animation: splashGlassFade 0.7s ease-out 0.5s forwards; opacity: 0; }
+        .splash-orb { animation: splashGlow 2.4s ease-in-out infinite; }
       `}</style>
 
-      <div className="relative flex items-center justify-center" style={{ width: 240, height: 200 }}>
-        {/* soft glow behind the tortoise */}
-        <div
-          className="splash-glow absolute rounded-full"
-          style={{
-            width: 260,
-            height: 260,
-            background: "radial-gradient(circle, rgba(255,153,51,0.35) 0%, rgba(255,153,51,0) 70%)",
-          }}
-        />
+      {/* soft glow behind everything */}
+      <div
+        className="splash-orb absolute rounded-full"
+        style={{ width: 320, height: 320, background: "radial-gradient(circle, rgba(99,102,241,0.35), rgba(99,102,241,0) 70%)" }}
+      />
 
-        {/* rising water bubbles */}
-        {bubbles.map((b, i) => (
-          <span
-            key={i}
-            className="splash-bubble"
-            style={{ left: b.left, width: b.size, height: b.size, animationDelay: b.delay }}
+      <div className="relative flex flex-col items-center">
+        {/* animated gradient ring */}
+        <svg width="120" height="120" viewBox="0 0 120 120" className="mb-4">
+          <defs>
+            <linearGradient id="splashGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#818cf8" />
+              <stop offset="100%" stopColor="#38bdf8" />
+            </linearGradient>
+          </defs>
+          <circle
+            className="splash-ring"
+            cx="60"
+            cy="60"
+            r="46"
+            fill="none"
+            stroke="url(#splashGrad)"
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeDasharray="290"
           />
-        ))}
-
-        {/* the hand-drawn tortoise, swimming in then settling with a bounce */}
-        <div className={`splash-tortoise-wrap ${phase !== "swim" ? "splash-tortoise-settled" : ""}`}>
-          <TortoiseArt
-            width={190}
-            flipperTopClass="flipper-top"
-            flipperBottomClass="flipper-bottom"
-            tailClass="tail-fin"
-          />
-        </div>
-
-        {/* soft wave beneath the tortoise */}
-        <svg
-          className="splash-wave absolute"
-          style={{ bottom: 4, width: 210, height: 24 }}
-          viewBox="0 0 200 24"
-          fill="none"
-        >
-          <path d="M0 12 Q 25 0, 50 12 T 100 12 T 150 12 T 200 12 V24 H0 Z" fill="#7fd4f0" opacity="0.6" />
         </svg>
-      </div>
 
-      <h1 className="splash-title mt-6 text-3xl font-bold tracking-wide text-brand-600">ChatWave</h1>
+        {/* frosted glass wordmark panel */}
+        <div
+          className="splash-glass rounded-2xl border border-white/10 px-8 py-4 backdrop-blur-xl"
+          style={{ background: "rgba(255,255,255,0.06)" }}
+        >
+          <h1 className="text-2xl font-semibold tracking-wide text-white">ChatWave</h1>
+        </div>
+      </div>
     </div>
   );
 }
