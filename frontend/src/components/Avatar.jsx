@@ -12,16 +12,16 @@ export default function Avatar({ user, size = 40, showStatus = false }) {
         />
       ) : (
         <div
-          className="flex h-full w-full items-center justify-center rounded-full bg-brand-500 font-semibold text-white"
-          style={{ fontSize: size * 0.35 }}
+          className="flex h-full w-full items-center justify-center rounded-full font-semibold text-white"
+          style={{ fontSize: size * 0.35, background: "linear-gradient(135deg, #6366f1, #38bdf8)" }}
         >
           {initials}
         </div>
       )}
       {showStatus && (
         <span
-          className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white dark:border-gray-900 ${
-            user?.isOnline ? "bg-green-500" : "bg-gray-400"
+          className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#0a0e1f] ${
+            user?.isOnline ? "bg-green-500" : "bg-gray-500"
           }`}
         />
       )}

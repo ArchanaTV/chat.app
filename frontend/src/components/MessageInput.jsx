@@ -1,5 +1,7 @@
 import { useRef, useState } from "react";
 import EmojiPicker from "emoji-picker-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Smile, Paperclip, Clock, Send, X } from "lucide-react";
 import api from "../api/axios.js";
 import { useTheme } from "../context/ThemeContext.jsx";
 import VoiceRecorder from "./VoiceRecorder.jsx";
@@ -90,64 +92,108 @@ export default function MessageInput({ onSend, onSchedule, onTyping, replyTo, on
     .slice(0, 16);
 
   return (
-    <div className="relative border-t border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
-      {replyTo && (
-        <div className="mb-2 flex items-center justify-between rounded-lg bg-gray-100 px-3 py-1.5 text-xs dark:bg-gray-800">
-          <span className="truncate">
-            Replying to: <span className="font-medium">{replyTo.text || `[${replyTo.type}]`}</span>
-          </span>
-          <button onClick={onCancelReply} className="ml-2 text-gray-400 hover:text-gray-600">
-            ✕
-          </button>
-        </div>
-      )}
-
-      {scheduleOpen && (
-        <div className="mb-2 flex flex-wrap items-center gap-2 rounded-lg bg-brand-50 px-3 py-2 text-xs dark:bg-brand-700/20">
-          <span className="font-medium">Schedule this message for:</span>
-          <input
-            type="datetime-local"
-            min={minDateTime}
-            value={scheduleTime}
-            onChange={(e) => setScheduleTime(e.target.value)}
-            className="rounded border border-gray-300 bg-white px-2 py-1 text-xs dark:border-gray-700 dark:bg-gray-800"
-          />
-          <button
-            onClick={submitSchedule}
-            disabled={!text.trim() || !scheduleTime}
-            className="rounded-full bg-brand-600 px-3 py-1 font-medium text-white disabled:opacity-40"
+    <div className="relative border-t border-white/10 bg-white/[0.03] p-3 backdrop-blur-xl">
+      <AnimatePresence>
+        {replyTo && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="mb-2 overflow-hidden"
           >
-            Schedule
-          </button>
-          <button onClick={() => setScheduleOpen(false)} className="text-gray-400 hover:text-gray-600">
-            Cancel
-          </button>
-        </div>
-      )}
+            <div className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/70">
+              <span className="truncate">
+                Replying to: <span className="font-medium text-white">{replyTo.text || `[${replyTo.type}]`}</span>
+              </span>
+              <button onClick={onCancelReply} className="ml-2 text-white/40 hover:text-white/80">
+                <X size={14} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {showEmoji && (
-        <div className="absolute bottom-16 left-2 z-10">
-          <EmojiPicker onEmojiClick={onEmojiClick} theme={theme} />
-        </div>
-      )}
+      <AnimatePresence>
+        {scheduleOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="mb-2 overflow-hidden"
+          >
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-indigo-400/20 bg-indigo-400/10 px-3 py-2 text-xs text-white/80">
+              <span className="font-medium">Schedule this message for:</span>
+              <input
+                type="datetime-local"
+                min={minDateTime}
+                value={scheduleTime}
+                onChange={(e) => setScheduleTime(e.target.value)}
+                className="rounded border border-white/10 bg-white/10 px-2 py-1 text-xs text-white"
+              />
+              <button
+                onClick={submitSchedule}
+                disabled={!text.trim() || !scheduleTime}
+                className="rounded-full px-3 py-1 font-medium text-white disabled:opacity-40"
+                style={{ background: "linear-gradient(135deg, #6366f1, #38bdf8)" }}
+              >
+                Schedule
+              </button>
+              <button onClick={() => setScheduleOpen(false)} className="text-white/40 hover:text-white/80">
+                Cancel
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <div className="flex items-center gap-2">
-        <button onClick={() => setShowEmoji((s) => !s)} title="Emoji" className="text-xl">
-          😊
-        </button>
+      <AnimatePresence>
+        {showEmoji && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+            transition={{ duration: 0.15 }}
+            className="absolute bottom-16 left-2 z-10"
+          >
+            <EmojiPicker onEmojiClick={onEmojiClick} theme={theme} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        <button onClick={() => fileInputRef.current.click()} title="Attach file" className="text-xl" disabled={uploading}>
-          📎
-        </button>
+      <div className="flex items-center gap-1.5">
+        <motion.button
+          whileHover={{ scale: 1.15 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setShowEmoji((s) => !s)}
+          title="Emoji"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white"
+        >
+          <Smile size={18} />
+        </motion.button>
+
+        <motion.button
+          whileHover={{ scale: 1.15 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => fileInputRef.current.click()}
+          title="Attach file"
+          disabled={uploading}
+          className="flex h-9 w-9 items-center justify-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white disabled:opacity-40"
+        >
+          <Paperclip size={18} />
+        </motion.button>
         <input ref={fileInputRef} type="file" className="hidden" onChange={handleFilePick} />
 
-        <button
+        <motion.button
+          whileHover={{ scale: 1.15 }}
+          whileTap={{ scale: 0.9 }}
           onClick={() => setScheduleOpen((s) => !s)}
           title="Schedule message"
-          className={`text-xl ${scheduleOpen ? "text-brand-600" : ""}`}
+          className={`flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-white/10 ${
+            scheduleOpen ? "text-indigo-300" : "text-white/50 hover:text-white"
+          }`}
         >
-          🕐
-        </button>
+          <Clock size={18} />
+        </motion.button>
 
         <input
           value={text}
@@ -155,18 +201,21 @@ export default function MessageInput({ onSend, onSchedule, onTyping, replyTo, on
           onKeyDown={handleKeyDown}
           placeholder={uploading ? "Uploading..." : "Type a message..."}
           disabled={uploading}
-          className="flex-1 rounded-full border border-gray-300 bg-transparent px-4 py-2 text-sm outline-none focus:border-brand-500 dark:border-gray-700"
+          className="flex-1 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white outline-none placeholder:text-white/30 focus:border-indigo-400/50"
         />
 
         <VoiceRecorder onRecorded={(blob) => uploadAndSend(blob, "voice")} onCancel={() => {}} />
 
-        <button
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
           onClick={submitText}
           disabled={!text.trim()}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-white transition hover:bg-brand-700 disabled:opacity-40"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-white shadow-lg transition disabled:opacity-30"
+          style={{ background: "linear-gradient(135deg, #6366f1, #38bdf8)" }}
         >
-          ➤
-        </button>
+          <Send size={15} />
+        </motion.button>
       </div>
     </div>
   );

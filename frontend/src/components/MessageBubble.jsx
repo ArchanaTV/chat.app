@@ -1,15 +1,10 @@
 import { useState } from "react";
 import { format } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
+import { Trash2, Reply, Smile, FileText, Check, CheckCheck } from "lucide-react";
 import { resolveMediaUrl } from "../utils/media.js";
 
 const REACTION_CHOICES = ["👍", "❤️", "😂", "😮", "😢", "🎉"];
-
-const FileIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-    <path d="M14 2v6h6" />
-  </svg>
-);
 
 function formatBytes(bytes) {
   if (!bytes) return "";
@@ -43,8 +38,8 @@ export default function MessageBubble({ message, isOwn, onReply, onDelete, onRea
 
   if (message.deletedForEveryone) {
     return (
-      <div className={`flex ${isOwn ? "justify-end" : "justify-start"} px-2`}>
-        <div className="my-1 max-w-[70%] rounded-2xl bg-gray-100 px-4 py-2 text-sm italic text-gray-400 dark:bg-gray-800">
+      <div className={`flex ${isOwn ? "justify-end" : "justify-start"} px-3`}>
+        <div className="my-1 max-w-[70%] rounded-2xl border border-white/5 bg-white/[0.03] px-4 py-2 text-sm italic text-white/30">
           This message was deleted
         </div>
       </div>
@@ -52,48 +47,65 @@ export default function MessageBubble({ message, isOwn, onReply, onDelete, onRea
   }
 
   const bubbleClasses = isOwn
-    ? "bg-brand-600 text-white rounded-br-sm"
-    : "bg-white dark:bg-gray-800 rounded-bl-sm";
+    ? "text-white rounded-br-md"
+    : "text-white/90 rounded-bl-md border border-white/10 bg-white/[0.06]";
 
   const groupedReactions = groupReactions(message.reactions, currentUserId);
 
   return (
-    <div className={`group flex ${isOwn ? "justify-end" : "justify-start"} px-2`}>
+    <div className={`group flex ${isOwn ? "justify-end" : "justify-start"} px-3`}>
       <div className="my-1 flex max-w-[70%] flex-col items-end gap-0.5">
         <div className="flex items-end gap-1">
           {isOwn && (
             <div className="mb-1 hidden gap-1 group-hover:flex">
-              <button onClick={() => onDelete(message)} title="Delete" className="text-xs text-gray-400 hover:text-red-500">
-                🗑️
-              </button>
+              <motion.button
+                whileHover={{ scale: 1.15 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => onDelete(message)}
+                title="Delete"
+                className="text-white/30 hover:text-red-400"
+              >
+                <Trash2 size={13} />
+              </motion.button>
             </div>
           )}
 
           <div className="relative">
-            {pickerOpen && (
-              <div
-                className={`absolute z-30 flex gap-1 rounded-full bg-white p-1 shadow-lg dark:bg-gray-700 ${
-                  isOwn ? "-top-9 right-0" : "-top-9 left-0"
-                }`}
-              >
-                {REACTION_CHOICES.map((emoji) => (
-                  <button
-                    key={emoji}
-                    onClick={() => {
-                      onReact(message, emoji);
-                      setPickerOpen(false);
-                    }}
-                    className="rounded-full p-1 text-base transition hover:scale-125"
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            )}
+            <AnimatePresence>
+              {pickerOpen && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.85, y: 6 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.85, y: 6 }}
+                  transition={{ duration: 0.15 }}
+                  className={`absolute z-30 flex gap-1 rounded-full border border-white/10 bg-gray-900/95 p-1 shadow-xl backdrop-blur-xl ${
+                    isOwn ? "-top-10 right-0" : "-top-10 left-0"
+                  }`}
+                >
+                  {REACTION_CHOICES.map((emoji) => (
+                    <motion.button
+                      key={emoji}
+                      whileHover={{ scale: 1.3, y: -2 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => {
+                        onReact(message, emoji);
+                        setPickerOpen(false);
+                      }}
+                      className="rounded-full p-1 text-base"
+                    >
+                      {emoji}
+                    </motion.button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            <div className={`animate-fade-in rounded-2xl px-4 py-2 shadow-sm ${bubbleClasses}`}>
+            <div
+              className={`rounded-2xl px-4 py-2 shadow-md ${bubbleClasses}`}
+              style={isOwn ? { background: "linear-gradient(135deg, #6366f1, #38bdf8)" } : undefined}
+            >
               {message.replyTo && (
-                <div className={`mb-1 rounded-lg border-l-2 px-2 py-1 text-xs opacity-80 ${isOwn ? "border-white/60" : "border-brand-500"}`}>
+                <div className={`mb-1 rounded-lg border-l-2 px-2 py-1 text-xs opacity-80 ${isOwn ? "border-white/60" : "border-indigo-400"}`}>
                   {message.replyTo.text || `[${message.replyTo.type}]`}
                 </div>
               )}
@@ -110,9 +122,9 @@ export default function MessageBubble({ message, isOwn, onReply, onDelete, onRea
                 <a
                   href={resolveMediaUrl(message.fileUrl)}
                   download={message.fileName}
-                  className={`flex items-center gap-2 rounded-lg p-2 ${isOwn ? "bg-white/10" : "bg-gray-100 dark:bg-gray-700"}`}
+                  className={`flex items-center gap-2 rounded-lg p-2 ${isOwn ? "bg-white/10" : "bg-white/5"}`}
                 >
-                  <FileIcon />
+                  <FileText size={24} />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{message.fileName}</p>
                     <p className="text-xs opacity-70">{formatBytes(message.fileSize)}</p>
@@ -120,38 +132,51 @@ export default function MessageBubble({ message, isOwn, onReply, onDelete, onRea
                 </a>
               )}
 
-              <div className={`mt-1 flex items-center gap-1 text-[10px] ${isOwn ? "text-white/70" : "text-gray-400"}`}>
+              <div className={`mt-1 flex items-center gap-1 text-[10px] ${isOwn ? "text-white/70" : "text-white/35"}`}>
                 <span>{format(new Date(message.createdAt), "h:mm a")}</span>
-                {isOwn && <span>{message.seen ? "✓✓ Seen" : "✓ Sent"}</span>}
+                {isOwn && (message.seen ? <CheckCheck size={12} /> : <Check size={12} />)}
               </div>
             </div>
           </div>
 
           <div className="mb-1 hidden flex-col gap-1 group-hover:flex">
-            <button onClick={() => onReply(message)} title="Reply" className="text-xs text-gray-400 hover:text-brand-500">
-              ↩️
-            </button>
-            <button onClick={() => setPickerOpen((p) => !p)} title="React" className="text-xs text-gray-400 hover:text-brand-500">
-              😊
-            </button>
+            <motion.button
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => onReply(message)}
+              title="Reply"
+              className="text-white/30 hover:text-indigo-300"
+            >
+              <Reply size={13} />
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setPickerOpen((p) => !p)}
+              title="React"
+              className="text-white/30 hover:text-indigo-300"
+            >
+              <Smile size={13} />
+            </motion.button>
           </div>
         </div>
 
         {groupedReactions.length > 0 && (
           <div className={`flex gap-1 ${isOwn ? "justify-end" : "justify-start"}`}>
             {groupedReactions.map((r) => (
-              <button
+              <motion.button
                 key={r.emoji}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                whileHover={{ scale: 1.1 }}
                 onClick={() => onReact(message, r.emoji)}
-                className={`flex animate-pop-in items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-xs ${
-                  r.mine
-                    ? "border-brand-500 bg-brand-50 dark:bg-brand-700/30"
-                    : "border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
+                className={`flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-xs ${
+                  r.mine ? "border-indigo-400/50 bg-indigo-400/10" : "border-white/10 bg-white/[0.04]"
                 }`}
               >
                 <span>{r.emoji}</span>
-                {r.count > 1 && <span className="text-gray-500 dark:text-gray-400">{r.count}</span>}
-              </button>
+                {r.count > 1 && <span className="text-white/40">{r.count}</span>}
+              </motion.button>
             ))}
           </div>
         )}

@@ -7,7 +7,7 @@ html, body, #root {
 }
 
 body {
-  @apply bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 transition-colors duration-200;
+  @apply bg-[#0a0e1f] text-gray-100 transition-colors duration-200;
 }
 
 * {

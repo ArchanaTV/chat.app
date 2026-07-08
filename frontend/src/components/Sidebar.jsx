@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { LogOut } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import Avatar from "./Avatar.jsx";
-import ThemeToggle from "./ThemeToggle.jsx";
 import SearchUsers from "./SearchUsers.jsx";
 import FriendRequests from "./FriendRequests.jsx";
 import FriendsList from "./FriendsList.jsx";
@@ -20,53 +21,99 @@ export default function Sidebar({ friends, activeFriend, onSelect, unreadCounts,
   const [editOpen, setEditOpen] = useState(false);
 
   return (
-    <div className="flex h-full w-full flex-col border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 md:w-80">
-      <div className="flex items-center justify-center border-b border-gray-200 py-2 dark:border-gray-800">
+    <div
+      className="flex h-full w-full flex-col border border-white/10 bg-white/[0.04] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.04] md:w-80 md:rounded-2xl md:shadow-2xl"
+      style={{ colorScheme: "dark" }}
+    >
+      <div className="flex items-center justify-center border-b border-white/10 py-3">
         <Logo size={28} />
       </div>
 
       {/* Profile header */}
-      <div className="flex items-center justify-between border-b border-gray-200 p-3 dark:border-gray-800">
-        <button onClick={() => setEditOpen(true)} className="flex items-center gap-2">
+      <div className="flex items-center justify-between border-b border-white/10 p-3">
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => setEditOpen(true)}
+          className="flex items-center gap-2 rounded-xl px-2 py-1 transition hover:bg-white/5"
+        >
           <Avatar user={user} size={38} />
-          <span className="font-medium">{user.username}</span>
-        </button>
+          <span className="font-medium text-white">{user.username}</span>
+        </motion.button>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <button onClick={logout} title="Logout" className="text-lg">
-            🚪
-          </button>
+          <motion.button
+            whileHover={{ scale: 1.1, rotate: -8 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={logout}
+            title="Logout"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-white/60 transition hover:bg-white/10 hover:text-white"
+          >
+            <LogOut size={16} />
+          </motion.button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-800">
+      <div className="relative flex border-b border-white/10">
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`relative flex-1 py-2 text-sm font-medium transition ${
-              tab === t.id ? "text-brand-600" : "text-gray-400 hover:text-gray-600"
+            className={`relative flex-1 py-2.5 text-sm font-medium transition ${
+              tab === t.id ? "text-white" : "text-white/40 hover:text-white/70"
             }`}
           >
-            {t.label}
-            {t.id === "requests" && requestCount > 0 && (
-              <span className="ml-1 rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] text-white">{requestCount}</span>
+            <span className="inline-flex items-center gap-1">
+              {t.label}
+              {t.id === "requests" && requestCount > 0 && (
+                <motion.span
+                  key={requestCount}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="rounded-full bg-gradient-to-br from-indigo-400 to-sky-400 px-1.5 py-0.5 text-[10px] text-white"
+                >
+                  {requestCount}
+                </motion.span>
+              )}
+            </span>
+            {tab === t.id && (
+              <motion.span
+                layoutId="sidebar-tab-underline"
+                className="absolute bottom-0 left-0 h-0.5 w-full bg-gradient-to-r from-indigo-400 to-sky-400"
+                transition={{ type: "spring", stiffness: 400, damping: 32 }}
+              />
             )}
-            {tab === t.id && <span className="absolute bottom-0 left-0 h-0.5 w-full bg-brand-600" />}
           </button>
         ))}
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {tab === "friends" && (
-          <FriendsList friends={friends} activeFriend={activeFriend} onSelect={onSelect} unreadCounts={unreadCounts} presence={presence} moods={moods} />
-        )}
-        {tab === "search" && <SearchUsers />}
-        {tab === "requests" && <FriendRequests onAccepted={onFriendAdded} />}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={tab}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18 }}
+          >
+            {tab === "friends" && (
+              <FriendsList
+                friends={friends}
+                activeFriend={activeFriend}
+                onSelect={onSelect}
+                unreadCounts={unreadCounts}
+                presence={presence}
+                moods={moods}
+              />
+            )}
+            {tab === "search" && <SearchUsers />}
+            {tab === "requests" && <FriendRequests onAccepted={onFriendAdded} />}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
-      {editOpen && <ProfileEdit onClose={() => setEditOpen(false)} />}
+      <AnimatePresence>{editOpen && <ProfileEdit onClose={() => setEditOpen(false)} />}</AnimatePresence>
     </div>
   );
 }

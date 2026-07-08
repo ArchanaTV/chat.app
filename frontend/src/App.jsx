@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "./context/AuthContext.jsx";
 import { SocketProvider } from "./context/SocketContext.jsx";
 import Login from "./pages/Login.jsx";
@@ -15,9 +16,32 @@ function PrivateRoute({ children }) {
 
 function FullScreenLoader() {
   return (
-    <div className="flex h-screen w-full items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
+    <div className="flex h-screen w-full items-center justify-center bg-[#0a0e1f]">
+      <div className="relative h-10 w-10">
+        <div className="absolute inset-0 animate-spin rounded-full border-2 border-indigo-400/20 border-t-indigo-400" />
+        <div className="absolute inset-1.5 animate-pulse rounded-full bg-indigo-400/10 blur-sm" />
+      </div>
     </div>
+  );
+}
+
+// Fades + slightly slides each page in/out as the route changes, so moving
+// between login, register, and the chat app feels like one continuous,
+// premium experience instead of an abrupt jump cut.
+function PageTransition({ children }) {
+  const location = useLocation();
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={location.pathname}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
@@ -29,19 +53,21 @@ export default function App() {
   if (loading) return <FullScreenLoader />;
 
   return (
-    <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
-      <Route path="/register" element={user ? <Navigate to="/" replace /> : <Register />} />
-      <Route
-        path="/"
-        element={
-          <PrivateRoute>
-            <SocketProvider>
-              <Chat />
-            </SocketProvider>
-          </PrivateRoute>
-        }
-      />
-    </Routes>
+    <PageTransition>
+      <Routes>
+        <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+        <Route path="/register" element={user ? <Navigate to="/" replace /> : <Register />} />
+        <Route
+          path="/"
+          element={
+            <PrivateRoute>
+              <SocketProvider>
+                <Chat />
+              </SocketProvider>
+            </PrivateRoute>
+          }
+        />
+      </Routes>
+    </PageTransition>
   );
 }

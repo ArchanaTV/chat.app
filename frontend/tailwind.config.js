@@ -22,16 +22,11 @@ export default {
           "15%": { opacity: 1, transform: "translateY(-10px) scale(1.1)" },
           "100%": { transform: "translateY(-160px) scale(1.4)", opacity: 0 },
         },
-        "tortoise-walk": {
-          "0%, 100%": { transform: "translateX(0)" },
-          "50%": { transform: "translateX(10px)" },
-        },
       },
       animation: {
         "fade-in": "fade-in 0.2s ease-out",
         "pop-in": "pop-in 0.15s ease-out",
         "float-up": "float-up 1.6s ease-out forwards",
-        "tortoise-walk": "tortoise-walk 0.6s ease-in-out infinite",
       },
     },
   },

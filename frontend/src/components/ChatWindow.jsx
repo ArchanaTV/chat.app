@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, X } from "lucide-react";
 import api from "../api/axios.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useSocket } from "../context/SocketContext.jsx";
@@ -19,6 +21,7 @@ export default function ChatWindow({ friend, presence, mood }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState(null);
   const [heartBurstKey, setHeartBurstKey] = useState(0);
+  const [loadingHistory, setLoadingHistory] = useState(true);
   const bottomRef = useRef(null);
 
   // Load conversation history whenever the active friend changes.
@@ -29,8 +32,12 @@ export default function ChatWindow({ friend, presence, mood }) {
     setMessages([]);
     setSearchOpen(false);
     setSearchResults(null);
+    setLoadingHistory(true);
     api.get(`/messages/${friend._id}`).then(({ data }) => {
-      if (!cancelled) setMessages(data.messages);
+      if (!cancelled) {
+        setMessages(data.messages);
+        setLoadingHistory(false);
+      }
     });
     return () => {
       cancelled = true;
@@ -157,66 +164,111 @@ export default function ChatWindow({ friend, presence, mood }) {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
+      <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.03] px-4 py-3 backdrop-blur-xl">
         <div className="flex items-center gap-3">
           <Avatar user={{ ...friend, isOnline }} size={40} showStatus />
           <div>
-            <p className="font-medium">
+            <p className="font-medium text-white">
               {friend.username}
               <MoodBadge mood={mood} />
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">{isOnline ? "Online" : "Offline"}</p>
+            <p className="text-xs text-white/40">
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={isOnline ? "online" : "offline"}
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 4 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  {isOnline ? "Online" : "Offline"}
+                </motion.span>
+              </AnimatePresence>
+            </p>
           </div>
         </div>
-        <button onClick={() => setSearchOpen((s) => !s)} title="Search messages" className="text-lg">
-          🔍
-        </button>
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setSearchOpen((s) => !s)}
+          title="Search messages"
+          className="flex h-9 w-9 items-center justify-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white"
+        >
+          <Search size={17} />
+        </motion.button>
       </div>
 
-      {searchOpen && (
-        <div className="flex items-center gap-2 border-b border-gray-200 bg-white px-4 py-2 dark:border-gray-800 dark:bg-gray-900">
-          <input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && runSearch()}
-            placeholder="Search in conversation..."
-            className="flex-1 rounded-full border border-gray-300 bg-transparent px-3 py-1 text-sm outline-none focus:border-brand-500 dark:border-gray-700"
-          />
-          <button onClick={runSearch} className="text-sm font-medium text-brand-600">
-            Search
-          </button>
-          {searchResults && (
-            <button
-              onClick={() => {
-                setSearchResults(null);
-                setSearchQuery("");
-              }}
-              className="text-sm text-gray-400"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-      )}
+      <AnimatePresence>
+        {searchOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden border-b border-white/10 bg-white/[0.03] backdrop-blur-xl"
+          >
+            <div className="flex items-center gap-2 px-4 py-2">
+              <input
+                autoFocus
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && runSearch()}
+                placeholder="Search in conversation..."
+                className="flex-1 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white outline-none placeholder:text-white/30 focus:border-indigo-400/50"
+              />
+              <button onClick={runSearch} className="text-sm font-medium text-indigo-300">
+                Search
+              </button>
+              {searchResults && (
+                <button
+                  onClick={() => {
+                    setSearchResults(null);
+                    setSearchQuery("");
+                  }}
+                  className="text-white/40 hover:text-white/70"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Messages */}
-      <div className="relative flex-1 overflow-y-auto bg-gray-50 py-2 dark:bg-gray-950">
+      <div className="relative flex-1 overflow-y-auto py-3">
         <HeartBurst burstKey={heartBurstKey} />
-        {displayList.map((m) => (
-          <MessageBubble
-            key={m._id}
-            message={m}
-            isOwn={(m.sender?._id || m.sender) === user._id}
-            onReply={setReplyTo}
-            onDelete={handleDelete}
-            onReact={handleReact}
-            currentUserId={user._id}
-          />
-        ))}
+
+        {loadingHistory ? (
+          <MessagesSkeleton />
+        ) : displayList.length === 0 ? (
+          <EmptyConversation name={friend.username} />
+        ) : (
+          <AnimatePresence initial={false}>
+            {displayList.map((m) => (
+              <motion.div
+                key={m._id}
+                initial={{ opacity: 0, y: 12, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+              >
+                <MessageBubble
+                  message={m}
+                  isOwn={(m.sender?._id || m.sender) === user._id}
+                  onReply={setReplyTo}
+                  onDelete={handleDelete}
+                  onReact={handleReact}
+                  currentUserId={user._id}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        )}
         <div ref={bottomRef} />
       </div>
 
-      {isTyping && <TypingIndicator username={friend.username} />}
+      <AnimatePresence>{isTyping && <TypingIndicator username={friend.username} />}</AnimatePresence>
 
       <MessageInput
         onSend={send}
@@ -225,6 +277,38 @@ export default function ChatWindow({ friend, presence, mood }) {
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
       />
+    </div>
+  );
+}
+
+function EmptyConversation({ name }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center"
+    >
+      <div className="mb-2 flex h-16 w-16 items-center justify-center rounded-full border border-white/10 bg-white/5 text-2xl">
+        👋
+      </div>
+      <p className="font-medium text-white/70">Say hello to {name}!</p>
+      <p className="max-w-xs text-sm text-white/35">No messages yet — send the first one to start the conversation.</p>
+    </motion.div>
+  );
+}
+
+function MessagesSkeleton() {
+  const widths = ["40%", "55%", "30%", "60%"];
+  return (
+    <div className="flex flex-col gap-3 px-4 py-2">
+      {widths.map((w, i) => (
+        <div key={i} className={`flex ${i % 2 === 0 ? "justify-start" : "justify-end"}`}>
+          <div
+            className="h-9 animate-pulse rounded-2xl bg-white/[0.06]"
+            style={{ width: w }}
+          />
+        </div>
+      ))}
     </div>
   );
 }

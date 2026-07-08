@@ -74,7 +74,7 @@ export default function Chat() {
   };
 
   return (
-    <div className="relative flex h-screen w-full overflow-hidden">
+    <div className="relative flex h-screen w-full overflow-hidden md:gap-4 md:p-4">
       <AmbientGlowBackground />
       <div className={`${activeFriend ? "hidden md:flex" : "flex"} h-full`}>
         <Sidebar
@@ -92,20 +92,25 @@ export default function Chat() {
         />
       </div>
 
-      <div className={`${activeFriend ? "flex" : "hidden md:flex"} h-full flex-1`}>
+      <div className={`${activeFriend ? "flex" : "hidden md:flex"} h-full flex-1 md:overflow-hidden md:rounded-2xl md:border md:border-white/10 md:bg-white/[0.04] md:shadow-2xl md:backdrop-blur-xl`}>
         {activeFriend ? (
           <div className="flex h-full w-full flex-col">
             <button
               onClick={() => setActiveFriend(null)}
-              className="border-b border-gray-200 bg-white px-4 py-2 text-left text-sm text-brand-600 dark:border-gray-800 dark:bg-gray-900 md:hidden"
+              className="border-b border-white/10 bg-white/[0.02] px-4 py-2 text-left text-sm text-indigo-300 md:hidden"
             >
               ← Back
             </button>
             <ChatWindow friend={activeFriend} presence={presence} mood={moods[activeFriend._id] ?? activeFriend.mood} />
           </div>
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-gray-400">
-            Select a friend to start chatting
+          <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-white/30">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400/10 to-sky-400/10">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+            </div>
+            <p className="text-sm">Select a friend to start chatting</p>
           </div>
         )}
       </div>

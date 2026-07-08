@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { UserPlus, Check, X } from "lucide-react";
 import api from "../api/axios.js";
 import Avatar from "./Avatar.jsx";
 
@@ -21,33 +23,61 @@ export default function FriendRequests({ onAccepted }) {
   };
 
   if (requests.length === 0) {
-    return <p className="p-3 text-sm text-gray-400">No pending friend requests.</p>;
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="m-3 flex flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-6 text-center"
+      >
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400/20 to-sky-400/20">
+          <UserPlus size={22} className="text-indigo-300" />
+        </div>
+        <p className="text-sm font-medium text-white/80">No pending requests</p>
+        <p className="text-xs text-white/40">New friend requests will show up here</p>
+      </motion.div>
+    );
   }
 
   return (
     <div className="space-y-1 p-3">
-      {requests.map((req) => (
-        <div key={req._id} className="flex animate-fade-in items-center justify-between rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800">
-          <div className="flex items-center gap-2">
-            <Avatar user={req.from} size={32} />
-            <span className="text-sm font-medium">{req.from.username}</span>
-          </div>
-          <div className="flex gap-1">
-            <button
-              onClick={() => respond(req._id, "accept")}
-              className="rounded-full bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700"
-            >
-              Accept
-            </button>
-            <button
-              onClick={() => respond(req._id, "reject")}
-              className="rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200"
-            >
-              Reject
-            </button>
-          </div>
-        </div>
-      ))}
+      <AnimatePresence>
+        {requests.map((req) => (
+          <motion.div
+            key={req._id}
+            layout
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="flex items-center justify-between rounded-xl p-2 transition hover:bg-white/5"
+          >
+            <div className="flex items-center gap-2">
+              <Avatar user={req.from} size={32} />
+              <span className="text-sm font-medium text-white">{req.from.username}</span>
+            </div>
+            <div className="flex gap-1.5">
+              <motion.button
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.92 }}
+                onClick={() => respond(req._id, "accept")}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-white shadow-md"
+                style={{ background: "linear-gradient(135deg, #34d399, #10b981)" }}
+                title="Accept"
+              >
+                <Check size={14} />
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.08 }}
+                whileTap={{ scale: 0.92 }}
+                onClick={() => respond(req._id, "reject")}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition hover:text-white"
+                title="Reject"
+              >
+                <X size={14} />
+              </motion.button>
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
   );
 }

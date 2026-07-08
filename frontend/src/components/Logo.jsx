@@ -6,7 +6,13 @@ export default function Logo({ size = 32, showText = true, className = "" }) {
   const [imgFailed, setImgFailed] = useState(false);
 
   if (imgFailed) {
-    return <span className={`text-xl font-bold text-brand-600 ${className}`}>ChatWave</span>;
+    return (
+      <span
+        className={`bg-gradient-to-r from-indigo-300 to-sky-300 bg-clip-text text-xl font-bold text-transparent ${className}`}
+      >
+        ChatWave
+      </span>
+    );
   }
 
   return (
@@ -17,7 +23,11 @@ export default function Logo({ size = 32, showText = true, className = "" }) {
         style={{ height: size, width: "auto" }}
         onError={() => setImgFailed(true)}
       />
-      {showText && <span className="text-xl font-bold text-brand-600">ChatWave</span>}
+      {showText && (
+        <span className="bg-gradient-to-r from-indigo-300 to-sky-300 bg-clip-text text-xl font-bold text-transparent">
+          ChatWave
+        </span>
+      )}
     </div>
   );
 }
