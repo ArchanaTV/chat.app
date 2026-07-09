@@ -5,7 +5,7 @@ import AmbientGlowBackground from "./AmbientGlowBackground.jsx";
 // clean, minimal, "premium tech product" feel.
 export default function AuthCard({ title, subtitle, children }) {
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
+    <div className="relative flex min-h-screen-safe items-center justify-center overflow-hidden px-4 py-10">
       <AmbientGlowBackground />
 
       <div className="relative w-full max-w-sm">

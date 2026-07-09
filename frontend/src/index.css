@@ -6,8 +6,21 @@ html, body, #root {
   height: 100%;
 }
 
+/* Mobile browsers include the address bar in `100vh`, which cuts content
+   off in portrait mode. `100dvh` (dynamic viewport height) accounts for
+   that; browsers that don't support it yet just keep using the 100vh
+   fallback declared first. */
+.h-screen-safe {
+  height: 100vh;
+  height: 100dvh;
+}
+.min-h-screen-safe {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 body {
-  @apply bg-[#0a0e1f] text-gray-100 transition-colors duration-200;
+  @apply bg-[#0a0e1f] text-gray-100 transition-colors duration-200 overflow-x-hidden;
 }
 
 * {

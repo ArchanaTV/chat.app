@@ -115,6 +115,35 @@ export const initSocket = (io) => {
       io.emit("mood:update", { userId, mood });
     });
 
+    // ---- Voice/video call signaling ----
+    // These events just relay WebRTC connection info between the two people
+    // on a call; the actual audio/video travels directly between their
+    // browsers (peer-to-peer) once the connection is established - the
+    // server never sees or touches the media itself.
+    socket.on("call:invite", ({ to, callType, offer }) => {
+      io.to(to).emit("call:incoming", { from: userId, callType, offer });
+    });
+
+    socket.on("call:answer", ({ to, answer }) => {
+      io.to(to).emit("call:answered", { from: userId, answer });
+    });
+
+    socket.on("call:ice-candidate", ({ to, candidate }) => {
+      io.to(to).emit("call:ice-candidate", { from: userId, candidate });
+    });
+
+    socket.on("call:reject", ({ to }) => {
+      io.to(to).emit("call:rejected", { from: userId });
+    });
+
+    socket.on("call:end", ({ to }) => {
+      io.to(to).emit("call:ended", { from: userId });
+    });
+
+    socket.on("call:cancel", ({ to }) => {
+      io.to(to).emit("call:cancelled", { from: userId });
+    });
+
     // ---- Delete message (real-time notify) ----
     socket.on("message:delete", ({ messageId, receiverId, forEveryone }) => {
       io.to(receiverId).emit("message:deleted", { messageId, forEveryone });

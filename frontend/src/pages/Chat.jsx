@@ -4,6 +4,7 @@ import { useSocket } from "../context/SocketContext.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 import ChatWindow from "../components/ChatWindow.jsx";
 import AmbientGlowBackground from "../components/AmbientGlowBackground.jsx";
+import CallModal from "../components/CallModal.jsx";
 
 export default function Chat() {
   const { socket } = useSocket();
@@ -74,8 +75,9 @@ export default function Chat() {
   };
 
   return (
-    <div className="relative flex h-screen w-full overflow-hidden md:gap-4 md:p-4">
+    <div className="relative flex h-screen-safe w-full overflow-hidden md:gap-4 md:p-4">
       <AmbientGlowBackground />
+      <CallModal friends={friends} />
       <div className={`${activeFriend ? "hidden md:flex" : "flex"} h-full`}>
         <Sidebar
           friends={friends}

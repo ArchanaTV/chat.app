@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X } from "lucide-react";
+import { Search, X, Phone, Video } from "lucide-react";
 import api from "../api/axios.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useSocket } from "../context/SocketContext.jsx";
+import { useCall } from "../context/CallContext.jsx";
 import Avatar from "./Avatar.jsx";
 import MessageBubble from "./MessageBubble.jsx";
 import MessageInput from "./MessageInput.jsx";
@@ -14,6 +15,7 @@ import { MoodBadge } from "./MoodBubble.jsx";
 export default function ChatWindow({ friend, presence, mood }) {
   const { user } = useAuth();
   const { socket } = useSocket();
+  const { startCall, callStatus } = useCall();
   const [messages, setMessages] = useState([]);
   const [replyTo, setReplyTo] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
@@ -187,15 +189,37 @@ export default function ChatWindow({ friend, presence, mood }) {
             </p>
           </div>
         </div>
-        <motion.button
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => setSearchOpen((s) => !s)}
-          title="Search messages"
-          className="flex h-9 w-9 items-center justify-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white"
-        >
-          <Search size={17} />
-        </motion.button>
+        <div className="flex items-center gap-1">
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => startCall(friend, "audio")}
+            disabled={callStatus !== "idle"}
+            title="Voice call"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white disabled:opacity-30"
+          >
+            <Phone size={16} />
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => startCall(friend, "video")}
+            disabled={callStatus !== "idle"}
+            title="Video call"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white disabled:opacity-30"
+          >
+            <Video size={17} />
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setSearchOpen((s) => !s)}
+            title="Search messages"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-white/50 transition hover:bg-white/10 hover:text-white"
+          >
+            <Search size={17} />
+          </motion.button>
+        </div>
       </div>
 
       <AnimatePresence>
