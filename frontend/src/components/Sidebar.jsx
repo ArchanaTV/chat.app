@@ -41,7 +41,6 @@ export default function Sidebar({ friends, activeFriend, onSelect, unreadCounts,
           <span className="font-medium text-white">{user.username}</span>
         </motion.button>
         <div className="flex items-center gap-2">
-          <ThemeToggle />
           <motion.button
             whileHover={{ scale: 1.1, rotate: -8 }}
             whileTap={{ scale: 0.9 }}
