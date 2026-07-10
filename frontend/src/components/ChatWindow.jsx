@@ -164,7 +164,7 @@ export default function ChatWindow({ friend, presence, mood }) {
   const displayList = searchResults ?? messages;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-w-0 flex-col">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.03] px-4 py-3 backdrop-blur-xl">
         <div className="flex items-center gap-3">
@@ -260,7 +260,7 @@ export default function ChatWindow({ friend, presence, mood }) {
       </AnimatePresence>
 
       {/* Messages */}
-      <div className="relative flex-1 overflow-y-auto py-3">
+      <div className="relative min-w-0 flex-1 overflow-y-auto py-3">
         <HeartBurst burstKey={heartBurstKey} />
 
         {loadingHistory ? (

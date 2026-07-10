@@ -32,12 +32,21 @@ export default function CallModal({ friends }) {
   const friendInfo = friends?.find((f) => f._id === remoteUser?._id) || remoteUser;
 
   useEffect(() => {
-    if (localVideoRef.current) localVideoRef.current.srcObject = localStream || null;
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = localStream || null;
+      if (localStream) localVideoRef.current.play().catch(() => {});
+    }
   }, [localStream]);
 
   useEffect(() => {
-    if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream || null;
-    if (remoteAudioRef.current) remoteAudioRef.current.srcObject = remoteStream || null;
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = remoteStream || null;
+      if (remoteStream) remoteVideoRef.current.play().catch(() => {});
+    }
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = remoteStream || null;
+      if (remoteStream) remoteAudioRef.current.play().catch(() => {});
+    }
   }, [remoteStream]);
 
   useEffect(() => {

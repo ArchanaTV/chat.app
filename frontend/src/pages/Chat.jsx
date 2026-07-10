@@ -94,7 +94,7 @@ export default function Chat() {
         />
       </div>
 
-      <div className={`${activeFriend ? "flex" : "hidden md:flex"} h-full flex-1 md:overflow-hidden md:rounded-2xl md:border md:border-white/10 md:bg-white/[0.04] md:shadow-2xl md:backdrop-blur-xl`}>
+      <div className={`${activeFriend ? "flex" : "hidden md:flex"} h-full min-w-0 flex-1 overflow-hidden md:rounded-2xl md:border md:border-white/10 md:bg-white/[0.04] md:shadow-2xl md:backdrop-blur-xl`}>
         {activeFriend ? (
           <div className="flex h-full w-full flex-col">
             <button

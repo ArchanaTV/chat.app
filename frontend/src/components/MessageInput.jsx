@@ -201,7 +201,7 @@ export default function MessageInput({ onSend, onSchedule, onTyping, replyTo, on
           onKeyDown={handleKeyDown}
           placeholder={uploading ? "Uploading..." : "Type a message..."}
           disabled={uploading}
-          className="flex-1 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white outline-none placeholder:text-white/30 focus:border-indigo-400/50"
+          className="min-w-0 flex-1 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-white outline-none placeholder:text-white/30 focus:border-indigo-400/50"
         />
 
         <VoiceRecorder onRecorded={(blob) => uploadAndSend(blob, "voice")} onCancel={() => {}} />

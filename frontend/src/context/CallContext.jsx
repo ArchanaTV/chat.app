@@ -62,8 +62,10 @@ export const CallProvider = ({ children }) => {
       };
 
       pc.onconnectionstatechange = () => {
-        if (["failed", "disconnected", "closed"].includes(pc.connectionState)) {
-          if (pc.connectionState === "failed") setError("Call connection failed");
+        if (pc.connectionState === "failed") {
+          setError("Couldn't connect the call — try again on the same wifi, or a different network");
+        } else if (pc.connectionState === "disconnected") {
+          setError("Connection lost — the call may be unstable");
         }
       };
 

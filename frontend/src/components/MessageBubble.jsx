@@ -53,8 +53,8 @@ export default function MessageBubble({ message, isOwn, onReply, onDelete, onRea
   const groupedReactions = groupReactions(message.reactions, currentUserId);
 
   return (
-    <div className={`group flex ${isOwn ? "justify-end" : "justify-start"} px-3`}>
-      <div className="my-1 flex max-w-[70%] flex-col items-end gap-0.5">
+    <div className={`group flex min-w-0 ${isOwn ? "justify-end" : "justify-start"} px-3`}>
+      <div className="my-1 flex min-w-0 max-w-[70%] flex-col items-end gap-0.5">
         <div className="flex items-end gap-1">
           {isOwn && (
             <div className="mb-1 hidden gap-1 group-hover:flex">
