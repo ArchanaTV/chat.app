@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useSocket } from "./SocketContext.jsx";
 import { useAuth } from "./AuthContext.jsx";
+import { playRingback, playIncomingRingtone, playEndTone, stopAll } from "../utils/callSounds.js";
 
 const CallContext = createContext(null);
 
@@ -15,8 +16,8 @@ export const CallProvider = ({ children }) => {
   const { socket } = useSocket();
   const { user } = useAuth();
 
-  // idle -> calling (outgoing, ringing) -> active
-  // idle -> ringing (incoming) -> active
+  // idle -> calling (outgoing) -> active -> ended -> idle
+  // idle -> ringing (incoming) -> active -> ended -> idle
   const [callStatus, setCallStatus] = useState("idle");
   const [callType, setCallType] = useState(null); // "audio" | "video"
   const [remoteUser, setRemoteUser] = useState(null); // { _id, username, avatarUrl }
@@ -24,28 +25,49 @@ export const CallProvider = ({ children }) => {
   const [remoteStream, setRemoteStream] = useState(null);
   const [muted, setMuted] = useState(false);
   const [cameraOff, setCameraOff] = useState(false);
+  const [onHold, setOnHold] = useState(false);
   const [error, setError] = useState("");
+  const [endedReason, setEndedReason] = useState(""); // "You ended the call" / "Declined" / etc.
 
   const pcRef = useRef(null);
   const pendingCandidatesRef = useRef([]);
   const incomingOfferRef = useRef(null);
+  const localStreamRef = useRef(null); // avoids stale closures in cleanup
 
-  const cleanup = useCallback(() => {
+  useEffect(() => {
+    localStreamRef.current = localStream;
+  }, [localStream]);
+
+  const cleanup = useCallback((reason) => {
+    stopAll();
+    if (reason) playEndTone();
     pcRef.current?.close();
     pcRef.current = null;
-    localStream?.getTracks().forEach((t) => t.stop());
+    localStreamRef.current?.getTracks().forEach((t) => t.stop());
     setLocalStream(null);
     setRemoteStream(null);
-    setCallStatus("idle");
-    setCallType(null);
-    setRemoteUser(null);
     setMuted(false);
     setCameraOff(false);
+    setOnHold(false);
     setError("");
     pendingCandidatesRef.current = [];
     incomingOfferRef.current = null;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localStream]);
+
+    if (reason) {
+      setEndedReason(reason);
+      setCallStatus("ended");
+      setTimeout(() => {
+        setCallStatus("idle");
+        setCallType(null);
+        setRemoteUser(null);
+        setEndedReason("");
+      }, 1800);
+    } else {
+      setCallStatus("idle");
+      setCallType(null);
+      setRemoteUser(null);
+    }
+  }, []);
 
   const createPeerConnection = useCallback(
     (targetUserId) => {
@@ -83,6 +105,7 @@ export const CallProvider = ({ children }) => {
         setCallType(type);
         setRemoteUser(friend);
         setCallStatus("calling");
+        playRingback();
 
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
@@ -99,7 +122,7 @@ export const CallProvider = ({ children }) => {
         socket?.emit("call:invite", { to: friend._id, callType: type, offer });
       } catch (err) {
         setError("Couldn't access camera/microphone");
-        setTimeout(cleanup, 1500);
+        setTimeout(() => cleanup(), 1500);
       }
     },
     [socket, createPeerConnection, cleanup]
@@ -108,6 +131,7 @@ export const CallProvider = ({ children }) => {
   // ---- Accept an incoming call ----
   const acceptCall = useCallback(async () => {
     if (!incomingOfferRef.current) return;
+    stopAll();
     const { from, offer, callType: type } = incomingOfferRef.current;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -132,7 +156,7 @@ export const CallProvider = ({ children }) => {
       setCallStatus("active");
     } catch (err) {
       setError("Couldn't access camera/microphone");
-      setTimeout(cleanup, 1500);
+      setTimeout(() => cleanup(), 1500);
     }
   }, [socket, createPeerConnection, cleanup]);
 
@@ -147,7 +171,7 @@ export const CallProvider = ({ children }) => {
     if (remoteUser) {
       socket?.emit(callStatus === "calling" ? "call:cancel" : "call:end", { to: remoteUser._id });
     }
-    cleanup();
+    cleanup("You ended the call");
   }, [socket, remoteUser, callStatus, cleanup]);
 
   const toggleMute = useCallback(() => {
@@ -160,12 +184,20 @@ export const CallProvider = ({ children }) => {
     setCameraOff((c) => !c);
   }, [localStream, cameraOff]);
 
+  // Lightweight local "hold": mutes your own mic + camera and mirrors that
+  // to the other side simply by muting your outgoing tracks. There's no
+  // dedicated hold-music/signaling exchange - it's the simple, honest version.
+  const toggleHold = useCallback(() => {
+    const next = !onHold;
+    localStream?.getTracks().forEach((t) => (t.enabled = !next));
+    setOnHold(next);
+  }, [localStream, onHold]);
+
   // ---- Socket listeners for incoming signaling ----
   useEffect(() => {
     if (!socket) return;
 
     const handleIncoming = ({ from, callType: type, offer }) => {
-      // Busy handling: if already on/starting a call, auto-reject new ones
       if (callStatus !== "idle") {
         socket.emit("call:reject", { to: from });
         return;
@@ -174,10 +206,16 @@ export const CallProvider = ({ children }) => {
       setCallType(type);
       setRemoteUser({ _id: from });
       setCallStatus("ringing");
+      playIncomingRingtone();
+      if (navigator.vibrate) {
+        // Repeating vibration pattern; Android Chrome supports this, iOS Safari does not (silently no-ops there).
+        navigator.vibrate([500, 300, 500, 300, 500]);
+      }
     };
 
     const handleAnswered = async ({ answer }) => {
       if (!pcRef.current) return;
+      stopAll();
       await pcRef.current.setRemoteDescription(new RTCSessionDescription(answer));
       for (const candidate of pendingCandidatesRef.current) {
         await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
@@ -198,13 +236,9 @@ export const CallProvider = ({ children }) => {
       }
     };
 
-    const handleRejected = () => {
-      setError("Call declined");
-      setTimeout(cleanup, 1200);
-    };
-
-    const handleEnded = () => cleanup();
-    const handleCancelled = () => cleanup();
+    const handleRejected = () => cleanup("Call declined");
+    const handleEnded = () => cleanup("Call ended");
+    const handleCancelled = () => cleanup("Missed call");
 
     socket.on("call:incoming", handleIncoming);
     socket.on("call:answered", handleAnswered);
@@ -224,6 +258,9 @@ export const CallProvider = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, callStatus, cleanup]);
 
+  // Stop any lingering tones if the component unmounts mid-call (e.g. logout)
+  useEffect(() => () => stopAll(), []);
+
   return (
     <CallContext.Provider
       value={{
@@ -234,13 +271,16 @@ export const CallProvider = ({ children }) => {
         remoteStream,
         muted,
         cameraOff,
+        onHold,
         error,
+        endedReason,
         startCall,
         acceptCall,
         rejectCall,
         endCall,
         toggleMute,
         toggleCamera,
+        toggleHold,
         currentUser: user,
       }}
     >

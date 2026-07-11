@@ -1,10 +1,11 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import api from "../api/axios.js";
 import { useSocket } from "../context/SocketContext.jsx";
 import Sidebar from "../components/Sidebar.jsx";
 import ChatWindow from "../components/ChatWindow.jsx";
 import AmbientGlowBackground from "../components/AmbientGlowBackground.jsx";
 import CallModal from "../components/CallModal.jsx";
+import useMessageNotifications from "../hooks/useMessageNotifications.jsx";
 
 export default function Chat() {
   const { socket } = useSocket();
@@ -14,6 +15,17 @@ export default function Chat() {
   const [presence, setPresence] = useState({}); // { [userId]: { isOnline, lastSeen } }
   const [moods, setMoods] = useState({}); // { [userId]: "happy" | "sleepy" | "chill" | null }
   const [requestCount, setRequestCount] = useState(0);
+
+  const { notify, setBadgeCount } = useMessageNotifications({
+    onNotificationClick: (senderId) => {
+      const target = friendsRef.current.find((f) => f._id === senderId);
+      if (target) selectFriend(target);
+    },
+  });
+  const friendsRef = useRef(friends);
+  useEffect(() => {
+    friendsRef.current = friends;
+  }, [friends]);
 
   const loadFriends = useCallback(async () => {
     const { data } = await api.get("/friends");
@@ -38,6 +50,12 @@ export default function Chat() {
     loadUnread();
   }, [loadFriends, loadRequestCount, loadUnread]);
 
+  useEffect(() => {
+    const total = Object.values(unreadCounts).reduce((sum, c) => sum + c, 0);
+    setBadgeCount(total);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unreadCounts]);
+
   // Global socket listeners: presence + incoming messages (for unread badges) + friend request pushes
   useEffect(() => {
     if (!socket) return;
@@ -55,6 +73,8 @@ export default function Chat() {
       const isActiveConvo = activeFriend && senderId === activeFriend._id;
       if (senderId && !isActiveConvo && senderId !== message.receiver) {
         setUnreadCounts((prev) => ({ ...prev, [senderId]: (prev[senderId] || 0) + 1 }));
+        const sender = friendsRef.current.find((f) => f._id === senderId);
+        if (sender) notify(message, sender.username, sender.avatarUrl);
       }
     };
 
@@ -103,7 +123,7 @@ export default function Chat() {
             >
               ← Back
             </button>
-            <ChatWindow friend={activeFriend} presence={presence} mood={moods[activeFriend._id] ?? activeFriend.mood} />
+            <ChatWindow friend={activeFriend} friends={friends} presence={presence} mood={moods[activeFriend._id] ?? activeFriend.mood} />
           </div>
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-white/30">

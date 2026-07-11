@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff } from "lucide-react";
+import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, Volume2, Pause, Play, Speaker } from "lucide-react";
 import { useCall } from "../context/CallContext.jsx";
 import Avatar from "./Avatar.jsx";
 
@@ -16,18 +16,24 @@ export default function CallModal({ friends }) {
     remoteStream,
     muted,
     cameraOff,
+    onHold,
     error,
+    endedReason,
     acceptCall,
     rejectCall,
     endCall,
     toggleMute,
     toggleCamera,
+    toggleHold,
   } = useCall();
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const remoteAudioRef = useRef(null);
   const [duration, setDuration] = useState(0);
+  const [speakerOn, setSpeakerOn] = useState(true);
+  const [outputDevices, setOutputDevices] = useState([]);
+  const [showOutputPicker, setShowOutputPicker] = useState(false);
 
   const friendInfo = friends?.find((f) => f._id === remoteUser?._id) || remoteUser;
 
@@ -58,10 +64,39 @@ export default function CallModal({ friends }) {
     return () => clearInterval(t);
   }, [callStatus]);
 
+  // Best-effort audio output device list - only works in browsers that
+  // support setSinkId (Chrome desktop/Android). Safari/iOS will just show
+  // no alternate devices, which is an honest Apple platform limitation.
+  useEffect(() => {
+    if (callStatus !== "active" || !navigator.mediaDevices?.enumerateDevices) return;
+    navigator.mediaDevices.enumerateDevices().then((devices) => {
+      setOutputDevices(devices.filter((d) => d.kind === "audiooutput"));
+    });
+  }, [callStatus]);
+
+  const selectOutput = async (deviceId) => {
+    setShowOutputPicker(false);
+    const target = callType === "video" ? remoteVideoRef.current : remoteAudioRef.current;
+    if (target?.setSinkId) {
+      try {
+        await target.setSinkId(deviceId);
+      } catch {
+        /* unsupported on this browser/platform */
+      }
+    }
+  };
+
   if (callStatus === "idle") return null;
 
   const mm = String(Math.floor(duration / 60)).padStart(2, "0");
   const ss = String(duration % 60).padStart(2, "0");
+
+  const statusText = {
+    calling: "Calling...",
+    ringing: "Incoming call...",
+    active: onHold ? "On hold" : `${mm}:${ss}`,
+    ended: endedReason || "Call ended",
+  }[callStatus];
 
   return (
     <AnimatePresence>
@@ -69,13 +104,20 @@ export default function CallModal({ friends }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-[#05070f]/95 backdrop-blur-xl"
+        className="fixed inset-0 z-[200] flex flex-col items-center justify-center overflow-hidden bg-[#05070f]/97 backdrop-blur-xl"
       >
-        {/* hidden audio element carries remote sound for voice-only calls */}
+        {/* animated ambient background */}
+        <motion.div
+          className="absolute rounded-full"
+          style={{ width: 500, height: 500, background: "radial-gradient(circle, rgba(99,102,241,0.25), transparent 70%)" }}
+          animate={{ scale: [1, 1.15, 1] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        />
+
         {callType === "audio" && <audio ref={remoteAudioRef} autoPlay />}
 
         {error && (
-          <div className="absolute top-6 rounded-full border border-red-400/30 bg-red-400/10 px-4 py-1.5 text-sm text-red-300">
+          <div className="absolute top-6 z-10 rounded-full border border-red-400/30 bg-red-400/10 px-4 py-1.5 text-sm text-red-300">
             {error}
           </div>
         )}
@@ -85,49 +127,59 @@ export default function CallModal({ friends }) {
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="flex flex-col items-center gap-4"
+            className="relative z-10 flex flex-col items-center gap-4"
           >
             <PulsingAvatar user={friendInfo} />
             <div className="text-center">
-              <p className="text-xl font-semibold text-white">{friendInfo?.username || "Someone"}</p>
-              <p className="text-sm text-white/50">Incoming {callType === "video" ? "video" : "voice"} call...</p>
+              <p className="text-2xl font-semibold text-white">{friendInfo?.username || "Someone"}</p>
+              <p className="mt-1 text-sm text-white/50">{callType === "video" ? "Incoming video call" : "Incoming voice call"}</p>
             </div>
-            <div className="mt-6 flex gap-6">
-              <CallButton onClick={rejectCall} color="red" icon={<PhoneOff size={22} />} label="Decline" />
-              <CallButton onClick={acceptCall} color="green" icon={<Phone size={22} />} label="Accept" />
+            <div className="mt-8 flex gap-10">
+              <CallButton onClick={rejectCall} color="red" icon={<PhoneOff size={24} />} label="Decline" />
+              <CallButton onClick={acceptCall} color="green" icon={<Phone size={24} />} label="Accept" pulse />
             </div>
           </motion.div>
         )}
 
-        {/* ---- Outgoing call (calling / ringing on their end) ---- */}
+        {/* ---- Outgoing call (calling) ---- */}
         {callStatus === "calling" && (
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="flex flex-col items-center gap-4"
+            className="relative z-10 flex flex-col items-center gap-4"
           >
             <PulsingAvatar user={friendInfo} />
             <div className="text-center">
-              <p className="text-xl font-semibold text-white">{friendInfo?.username}</p>
-              <p className="text-sm text-white/50">Calling...</p>
+              <p className="text-2xl font-semibold text-white">{friendInfo?.username}</p>
+              <p className="mt-1 text-sm text-white/50">{statusText}</p>
             </div>
-            <div className="mt-6">
-              <CallButton onClick={endCall} color="red" icon={<PhoneOff size={22} />} label="Cancel" />
+            <div className="mt-8">
+              <CallButton onClick={endCall} color="red" icon={<PhoneOff size={24} />} label="Cancel" />
+            </div>
+          </motion.div>
+        )}
+
+        {/* ---- Call ended (brief terminal screen) ---- */}
+        {callStatus === "ended" && (
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="relative z-10 flex flex-col items-center gap-4"
+          >
+            <Avatar user={friendInfo} size={88} />
+            <div className="text-center">
+              <p className="text-xl font-semibold text-white">{friendInfo?.username}</p>
+              <p className="mt-1 text-sm text-white/50">{statusText}</p>
             </div>
           </motion.div>
         )}
 
         {/* ---- Active call ---- */}
         {callStatus === "active" && (
-          <div className="relative flex h-full w-full flex-col items-center justify-center">
+          <div className="relative z-10 flex h-full w-full flex-col items-center justify-center">
             {callType === "video" ? (
               <>
-                <video
-                  ref={remoteVideoRef}
-                  autoPlay
-                  playsInline
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
+                <video ref={remoteVideoRef} autoPlay playsInline className="absolute inset-0 h-full w-full object-cover" />
                 {!remoteStream && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <PulsingAvatar user={friendInfo} />
@@ -140,7 +192,7 @@ export default function CallModal({ friends }) {
                   muted
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="absolute bottom-24 right-4 h-32 w-24 rounded-2xl border border-white/10 object-cover shadow-2xl sm:h-40 sm:w-28"
+                  className="absolute bottom-28 right-4 h-32 w-24 rounded-2xl border border-white/10 object-cover shadow-2xl sm:h-40 sm:w-28"
                   style={{ transform: "scaleX(-1)" }}
                 />
               </>
@@ -148,13 +200,36 @@ export default function CallModal({ friends }) {
               <PulsingAvatar user={friendInfo} />
             )}
 
-            <div className={`${callType === "video" ? "absolute top-6" : "mt-4"} rounded-full border border-white/10 bg-white/5 px-4 py-1.5 backdrop-blur`}>
-              <p className="text-sm text-white/80">
-                {friendInfo?.username} · {mm}:{ss}
-              </p>
+            <div className={`${callType === "video" ? "absolute top-6" : "mt-4"} flex flex-col items-center gap-1`}>
+              {callType !== "video" && <p className="text-xl font-semibold text-white">{friendInfo?.username}</p>}
+              <div className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 backdrop-blur">
+                <p className="text-sm text-white/80">{statusText}</p>
+              </div>
             </div>
 
-            <div className={`${callType === "video" ? "absolute bottom-6" : "mt-8"} flex gap-4`}>
+            {/* output device picker */}
+            <AnimatePresence>
+              {showOutputPicker && outputDevices.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                  className="absolute bottom-28 z-20 w-56 rounded-2xl border border-white/10 bg-gray-900/95 p-2 shadow-2xl backdrop-blur-xl"
+                >
+                  {outputDevices.map((d) => (
+                    <button
+                      key={d.deviceId}
+                      onClick={() => selectOutput(d.deviceId)}
+                      className="block w-full rounded-xl px-3 py-2 text-left text-sm text-white/80 hover:bg-white/10"
+                    >
+                      {d.label || "Audio device"}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className={`${callType === "video" ? "absolute bottom-6" : "mt-10"} flex flex-wrap items-center justify-center gap-3`}>
               <CallButton onClick={toggleMute} color={muted ? "red" : "glass"} icon={muted ? <MicOff size={18} /> : <Mic size={18} />} small />
               {callType === "video" && (
                 <CallButton
@@ -164,7 +239,17 @@ export default function CallModal({ friends }) {
                   small
                 />
               )}
-              <CallButton onClick={endCall} color="red" icon={<PhoneOff size={18} />} small />
+              <CallButton
+                onClick={() => setSpeakerOn((s) => !s)}
+                color={speakerOn ? "active" : "glass"}
+                icon={speakerOn ? <Volume2 size={18} /> : <Speaker size={18} />}
+                small
+              />
+              <CallButton onClick={toggleHold} color={onHold ? "active" : "glass"} icon={onHold ? <Play size={18} /> : <Pause size={18} />} small />
+              {outputDevices.length > 0 && (
+                <CallButton onClick={() => setShowOutputPicker((s) => !s)} color="glass" icon={<Speaker size={18} />} small />
+              )}
+              <CallButton onClick={endCall} color="red" icon={<PhoneOff size={20} />} />
             </div>
           </div>
         )}
@@ -187,11 +272,12 @@ function PulsingAvatar({ user }) {
   );
 }
 
-function CallButton({ onClick, color, icon, label, small }) {
+function CallButton({ onClick, color, icon, label, small, pulse }) {
   const colorClasses = {
     red: "bg-red-500 hover:bg-red-600",
     green: "bg-green-500 hover:bg-green-600",
     glass: "border border-white/10 bg-white/10 hover:bg-white/20",
+    active: "bg-indigo-500 hover:bg-indigo-600",
   };
   const size = small ? "h-12 w-12" : "h-16 w-16";
   return (
@@ -199,6 +285,8 @@ function CallButton({ onClick, color, icon, label, small }) {
       <motion.button
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.92 }}
+        animate={pulse ? { scale: [1, 1.08, 1] } : {}}
+        transition={pulse ? { duration: 1.2, repeat: Infinity } : {}}
         onClick={onClick}
         className={`flex ${size} items-center justify-center rounded-full text-white shadow-lg transition ${colorClasses[color]}`}
       >

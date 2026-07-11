@@ -11,33 +11,43 @@ import MessageInput from "./MessageInput.jsx";
 import TypingIndicator from "./TypingIndicator.jsx";
 import HeartBurst, { isHeartOnlyMessage } from "./HeartBurst.jsx";
 import { MoodBadge } from "./MoodBubble.jsx";
+import ForwardModal from "./ForwardModal.jsx";
 
-export default function ChatWindow({ friend, presence, mood }) {
+export default function ChatWindow({ friend, friends, presence, mood }) {
   const { user } = useAuth();
   const { socket } = useSocket();
   const { startCall, callStatus } = useCall();
   const [messages, setMessages] = useState([]);
   const [replyTo, setReplyTo] = useState(null);
+  const [forwardingMessage, setForwardingMessage] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState(null);
   const [heartBurstKey, setHeartBurstKey] = useState(0);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const bottomRef = useRef(null);
+  const scrollContainerRef = useRef(null);
+  const shouldAutoScrollRef = useRef(true);
 
-  // Load conversation history whenever the active friend changes.
-  // This always fetches from the database, so the full history (up to the
-  // backend's generous cap) is there on every open/reopen/refresh.
+  // Load conversation history whenever the active friend changes. Only the
+  // most recent page loads at first for a fast open; older messages load
+  // in as the person scrolls up (see loadOlderMessages below), so even a
+  // conversation with thousands of messages stays snappy to open.
   useEffect(() => {
     let cancelled = false;
     setMessages([]);
     setSearchOpen(false);
     setSearchResults(null);
     setLoadingHistory(true);
+    setHasMore(true);
+    shouldAutoScrollRef.current = true;
     api.get(`/messages/${friend._id}`).then(({ data }) => {
       if (!cancelled) {
         setMessages(data.messages);
+        setHasMore(data.messages.length >= 40);
         setLoadingHistory(false);
       }
     });
@@ -46,13 +56,51 @@ export default function ChatWindow({ friend, presence, mood }) {
     };
   }, [friend._id]);
 
+  const loadOlderMessages = async () => {
+    if (loadingOlder || !hasMore || messages.length === 0) return;
+    setLoadingOlder(true);
+    const container = scrollContainerRef.current;
+    const prevScrollHeight = container?.scrollHeight || 0;
+
+    const oldest = messages[0];
+    const { data } = await api.get(`/messages/${friend._id}`, {
+      params: { before: oldest.createdAt, limit: 40 },
+    });
+
+    if (data.messages.length === 0) {
+      setHasMore(false);
+    } else {
+      shouldAutoScrollRef.current = false;
+      setMessages((prev) => [...data.messages, ...prev]);
+      setHasMore(data.messages.length >= 40);
+      // Keep the scroll position steady (don't let loading older messages
+      // yank the view) by restoring the same distance from the bottom.
+      requestAnimationFrame(() => {
+        if (container) {
+          container.scrollTop = container.scrollHeight - prevScrollHeight;
+        }
+      });
+    }
+    setLoadingOlder(false);
+  };
+
+  const handleScroll = () => {
+    const container = scrollContainerRef.current;
+    if (container && container.scrollTop < 80) {
+      loadOlderMessages();
+    }
+  };
+
   // Mark as seen when opening / receiving new messages while window is active
   useEffect(() => {
     socket?.emit("message:seen", { friendId: friend._id });
   }, [friend._id, messages.length, socket]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (shouldAutoScrollRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+    shouldAutoScrollRef.current = true;
   }, [messages]);
 
   useEffect(() => {
@@ -138,18 +186,36 @@ export default function ChatWindow({ friend, presence, mood }) {
   };
 
   const handleDelete = async (message) => {
-    const forEveryone = confirm("Delete for everyone? (Cancel = delete just for you)");
-    await api.patch(`/messages/${message._id}/delete`, { forEveryone });
-    socket?.emit("message:delete", { messageId: message._id, receiverId: friend._id, forEveryone });
+    // The confirmation itself now happens in MessageBubble's own dialog,
+    // so by the time this runs the user has already confirmed. Since only
+    // the sender can trigger this (gated in MessageBubble), it always
+    // deletes for everyone - matching the simple, familiar delete flow.
+    await api.patch(`/messages/${message._id}/delete`, { forEveryone: true });
+    socket?.emit("message:delete", { messageId: message._id, receiverId: friend._id, forEveryone: true });
     setMessages((prev) =>
-      prev
-        .map((m) => (m._id === message._id ? (forEveryone ? { ...m, deletedForEveryone: true } : null) : m))
-        .filter(Boolean)
+      prev.map((m) => (m._id === message._id ? { ...m, deletedForEveryone: true } : m))
     );
   };
 
   const handleReact = (message, emoji) => {
     socket?.emit("message:react", { messageId: message._id, receiverId: friend._id, emoji });
+  };
+
+  const handleForward = (message) => {
+    setForwardingMessage(message);
+  };
+
+  const sendForward = (targetFriendId) => {
+    if (!forwardingMessage) return;
+    socket?.emit("message:send", {
+      receiverId: targetFriendId,
+      type: forwardingMessage.type,
+      text: forwardingMessage.text,
+      fileUrl: forwardingMessage.fileUrl,
+      fileName: forwardingMessage.fileName,
+      fileSize: forwardingMessage.fileSize,
+    });
+    setForwardingMessage(null);
   };
 
   const runSearch = async () => {
@@ -260,8 +326,18 @@ export default function ChatWindow({ friend, presence, mood }) {
       </AnimatePresence>
 
       {/* Messages */}
-      <div className="relative min-w-0 flex-1 overflow-y-auto py-3">
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="relative min-w-0 flex-1 overflow-y-auto py-3"
+      >
         <HeartBurst burstKey={heartBurstKey} />
+
+        {loadingOlder && (
+          <div className="flex justify-center py-2">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-400/30 border-t-indigo-400" />
+          </div>
+        )}
 
         {loadingHistory ? (
           <MessagesSkeleton />
@@ -283,6 +359,7 @@ export default function ChatWindow({ friend, presence, mood }) {
                   onReply={setReplyTo}
                   onDelete={handleDelete}
                   onReact={handleReact}
+                  onForward={handleForward}
                   currentUserId={user._id}
                 />
               </motion.div>
@@ -301,6 +378,17 @@ export default function ChatWindow({ friend, presence, mood }) {
         replyTo={replyTo}
         onCancelReply={() => setReplyTo(null)}
       />
+
+      <AnimatePresence>
+        {forwardingMessage && (
+          <ForwardModal
+            message={forwardingMessage}
+            friends={(friends || []).filter((f) => f._id !== friend._id)}
+            onSend={sendForward}
+            onClose={() => setForwardingMessage(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

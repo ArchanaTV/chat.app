@@ -12,7 +12,7 @@ const router = express.Router();
 // older-message pagination if a conversation gets very long.
 router.get("/:friendId", protect, async (req, res) => {
   const conversationId = buildConversationId(req.userId, req.params.friendId);
-  const { before, limit = 500 } = req.query;
+  const { before, limit = 40 } = req.query;
 
   const query = {
     conversationId,

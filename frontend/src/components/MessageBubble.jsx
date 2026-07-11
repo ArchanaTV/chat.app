@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { format } from "date-fns";
-import { motion, AnimatePresence } from "framer-motion";
-import { Trash2, Reply, Smile, FileText, Check, CheckCheck } from "lucide-react";
+import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
+import { Reply, FileText, Check, CheckCheck, Copy, Forward, Trash2 } from "lucide-react";
 import { resolveMediaUrl } from "../utils/media.js";
 
 const REACTION_CHOICES = ["👍", "❤️", "😂", "😮", "😢", "🎉"];
+const LONG_PRESS_MS = 480;
+const SWIPE_REPLY_THRESHOLD = 62;
 
 function formatBytes(bytes) {
   if (!bytes) return "";
@@ -18,7 +20,6 @@ function formatBytes(bytes) {
   return `${n.toFixed(1)} ${units[i]}`;
 }
 
-// Groups raw reaction docs [{emoji, user}] into [{emoji, count, mine}]
 function groupReactions(reactions, currentUserId) {
   if (!reactions?.length) return [];
   const map = new Map();
@@ -33,8 +34,51 @@ function groupReactions(reactions, currentUserId) {
   return Array.from(map.values());
 }
 
-export default function MessageBubble({ message, isOwn, onReply, onDelete, onReact, currentUserId }) {
+export default function MessageBubble({ message, isOwn, onReply, onDelete, onReact, onForward, currentUserId }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const x = useMotionValue(0);
+  const replyIconOpacity = useTransform(x, [0, SWIPE_REPLY_THRESHOLD], [0, 1]);
+  const replyIconScale = useTransform(x, [0, SWIPE_REPLY_THRESHOLD], [0.5, 1]);
+  const longPressTimer = useRef(null);
+  const vibratedRef = useRef(false);
+
+  const startLongPress = () => {
+    clearTimeout(longPressTimer.current);
+    longPressTimer.current = setTimeout(() => {
+      setMenuOpen(true);
+      if (navigator.vibrate) navigator.vibrate(20);
+    }, LONG_PRESS_MS);
+  };
+  const cancelLongPress = () => clearTimeout(longPressTimer.current);
+
+  const handleDrag = (_e, info) => {
+    if (!vibratedRef.current && info.offset.x > SWIPE_REPLY_THRESHOLD) {
+      vibratedRef.current = true;
+      if (navigator.vibrate) navigator.vibrate(15);
+    } else if (info.offset.x <= SWIPE_REPLY_THRESHOLD) {
+      vibratedRef.current = false;
+    }
+  };
+
+  const handleDragEnd = (_e, info) => {
+    vibratedRef.current = false;
+    if (info.offset.x > SWIPE_REPLY_THRESHOLD) {
+      onReply(message);
+    }
+  };
+
+  const copyText = async () => {
+    if (message.text) {
+      await navigator.clipboard.writeText(message.text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    }
+    setMenuOpen(false);
+  };
 
   if (message.deletedForEveryone) {
     return (
@@ -53,24 +97,19 @@ export default function MessageBubble({ message, isOwn, onReply, onDelete, onRea
   const groupedReactions = groupReactions(message.reactions, currentUserId);
 
   return (
-    <div className={`group flex min-w-0 ${isOwn ? "justify-end" : "justify-start"} px-3`}>
+    <div className={`group relative flex min-w-0 ${isOwn ? "justify-end" : "justify-start"} px-3`}>
+      {/* reply icon revealed as the bubble is swiped right */}
+      <motion.div
+        style={{ opacity: replyIconOpacity, scale: replyIconScale }}
+        className="pointer-events-none absolute left-6 top-1/2 -translate-y-1/2 text-indigo-300"
+      >
+        <Reply size={20} />
+      </motion.div>
+
       <div className="my-1 flex min-w-0 max-w-[70%] flex-col items-end gap-0.5">
         <div className="flex items-end gap-1">
-          {isOwn && (
-            <div className="mb-1 hidden gap-1 group-hover:flex">
-              <motion.button
-                whileHover={{ scale: 1.15 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => onDelete(message)}
-                title="Delete"
-                className="text-white/30 hover:text-red-400"
-              >
-                <Trash2 size={13} />
-              </motion.button>
-            </div>
-          )}
-
           <div className="relative">
+            {/* quick emoji reaction popover (desktop hover / tap the smiley) */}
             <AnimatePresence>
               {pickerOpen && (
                 <motion.div
@@ -100,9 +139,58 @@ export default function MessageBubble({ message, isOwn, onReply, onDelete, onRea
               )}
             </AnimatePresence>
 
-            <div
-              className={`rounded-2xl px-4 py-2 shadow-md ${bubbleClasses}`}
-              style={isOwn ? { background: "linear-gradient(135deg, #6366f1, #38bdf8)" } : undefined}
+            {/* modern long-press context menu: Reply / Copy / Forward / Delete */}
+            <AnimatePresence>
+              {menuOpen && (
+                <>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-40"
+                    onClick={() => setMenuOpen(false)}
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: 8 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: 8 }}
+                    transition={{ duration: 0.15 }}
+                    className={`absolute z-50 w-40 overflow-hidden rounded-2xl border border-white/10 bg-gray-900/95 py-1 shadow-2xl backdrop-blur-xl ${
+                      isOwn ? "-top-2 right-0" : "-top-2 left-0"
+                    }`}
+                  >
+                    <MenuItem icon={<Reply size={15} />} label="Reply" onClick={() => { onReply(message); setMenuOpen(false); }} />
+                    {message.text && <MenuItem icon={<Copy size={15} />} label={copied ? "Copied!" : "Copy"} onClick={copyText} />}
+                    <MenuItem icon={<Forward size={15} />} label="Forward" onClick={() => { onForward(message); setMenuOpen(false); }} />
+                    {isOwn && (
+                      <MenuItem
+                        icon={<Trash2 size={15} />}
+                        label="Delete"
+                        danger
+                        onClick={() => { setMenuOpen(false); setConfirmDelete(true); }}
+                      />
+                    )}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+
+            <motion.div
+              drag="x"
+              dragDirectionLock
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={{ left: 0, right: 0.5 }}
+              onDrag={handleDrag}
+              onDragEnd={handleDragEnd}
+              onPointerDown={startLongPress}
+              onPointerUp={cancelLongPress}
+              onPointerLeave={cancelLongPress}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setMenuOpen(true);
+              }}
+              style={{ x, background: isOwn ? "linear-gradient(135deg, #6366f1, #38bdf8)" : undefined }}
+              className={`cursor-grab rounded-2xl px-4 py-2 shadow-md active:cursor-grabbing ${bubbleClasses}`}
             >
               {message.replyTo && (
                 <div className={`mb-1 rounded-lg border-l-2 px-2 py-1 text-xs opacity-80 ${isOwn ? "border-white/60" : "border-indigo-400"}`}>
@@ -113,7 +201,7 @@ export default function MessageBubble({ message, isOwn, onReply, onDelete, onRea
               {message.type === "text" || message.type === "emoji" ? (
                 <p className="whitespace-pre-wrap break-words text-sm">{message.text}</p>
               ) : message.type === "image" ? (
-                <img src={resolveMediaUrl(message.fileUrl)} alt="shared" className="max-h-64 rounded-lg object-cover" />
+                <img src={resolveMediaUrl(message.fileUrl)} alt="shared" className="max-h-64 rounded-lg object-cover" draggable={false} />
               ) : message.type === "video" ? (
                 <video src={resolveMediaUrl(message.fileUrl)} controls className="max-h-64 rounded-lg" />
               ) : message.type === "audio" || message.type === "voice" ? (
@@ -136,29 +224,18 @@ export default function MessageBubble({ message, isOwn, onReply, onDelete, onRea
                 <span>{format(new Date(message.createdAt), "h:mm a")}</span>
                 {isOwn && (message.seen ? <CheckCheck size={12} /> : <Check size={12} />)}
               </div>
-            </div>
+            </motion.div>
           </div>
 
-          <div className="mb-1 hidden flex-col gap-1 group-hover:flex">
-            <motion.button
-              whileHover={{ scale: 1.15 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => onReply(message)}
-              title="Reply"
-              className="text-white/30 hover:text-indigo-300"
-            >
-              <Reply size={13} />
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.15 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setPickerOpen((p) => !p)}
-              title="React"
-              className="text-white/30 hover:text-indigo-300"
-            >
-              <Smile size={13} />
-            </motion.button>
-          </div>
+          <motion.button
+            whileHover={{ scale: 1.15 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setPickerOpen((p) => !p)}
+            title="React"
+            className="mb-1 hidden text-white/30 hover:text-indigo-300 group-hover:block"
+          >
+            <span className="text-sm">🙂</span>
+          </motion.button>
         </div>
 
         {groupedReactions.length > 0 && (
@@ -181,6 +258,60 @@ export default function MessageBubble({ message, isOwn, onReply, onDelete, onRea
           </div>
         )}
       </div>
+
+      {/* WhatsApp-style delete confirmation */}
+      <AnimatePresence>
+        {confirmDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+            onClick={() => setConfirmDelete(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-xs rounded-2xl border border-white/10 bg-gray-900/95 p-5 text-center shadow-2xl backdrop-blur-xl"
+            >
+              <p className="mb-4 font-medium text-white">Delete this message?</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="flex-1 rounded-xl border border-white/10 py-2 text-sm text-white/70 hover:bg-white/5"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setConfirmDelete(false);
+                    onDelete(message);
+                  }}
+                  className="flex-1 rounded-xl bg-red-500 py-2 text-sm font-medium text-white hover:bg-red-600"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+function MenuItem({ icon, label, onClick, danger }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm transition hover:bg-white/10 ${
+        danger ? "text-red-400" : "text-white/85"
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
