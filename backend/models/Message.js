@@ -8,7 +8,7 @@ const messageSchema = new mongoose.Schema(
     conversationId: { type: String, required: true, index: true },
     type: {
       type: String,
-      enum: ["text", "image", "video", "audio", "voice", "document", "emoji"],
+      enum: ["text", "image", "video", "audio", "voice", "document", "emoji", "call"],
       default: "text",
     },
     text: { type: String, default: "" },
@@ -24,6 +24,10 @@ const messageSchema = new mongoose.Schema(
     // a background job flips delivered to true at scheduledFor time.
     scheduledFor: { type: Date, default: null },
     delivered: { type: Boolean, default: true },
+    // Call log fields - only populated when type === "call"
+    callType: { type: String, enum: ["audio", "video", null], default: null },
+    callDuration: { type: Number, default: 0 }, // seconds
+    callOutcome: { type: String, enum: ["completed", "missed", "declined", "cancelled", null], default: null },
     reactions: [
       {
         emoji: { type: String, required: true },

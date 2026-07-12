@@ -45,6 +45,10 @@ export default function useMessageNotifications({ onNotificationClick }) {
       const preview =
         message.type === "text" || message.type === "emoji"
           ? message.text
+          : message.type === "call"
+          ? message.callOutcome === "missed" || message.callOutcome === "cancelled"
+            ? `Missed ${message.callType === "video" ? "video" : "voice"} call`
+            : `${message.callType === "video" ? "Video" : "Voice"} call`
           : `Sent ${message.type === "image" ? "a photo" : message.type === "video" ? "a video" : message.type === "voice" || message.type === "audio" ? "a voice message" : "a file"}`;
 
       const n = new Notification(senderName, {

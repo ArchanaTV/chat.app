@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, Phone, Video } from "lucide-react";
+import { Search, X, Phone, Video, ArrowLeft } from "lucide-react";
 import api from "../api/axios.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useSocket } from "../context/SocketContext.jsx";
@@ -13,7 +13,7 @@ import HeartBurst, { isHeartOnlyMessage } from "./HeartBurst.jsx";
 import { MoodBadge } from "./MoodBubble.jsx";
 import ForwardModal from "./ForwardModal.jsx";
 
-export default function ChatWindow({ friend, friends, presence, mood }) {
+export default function ChatWindow({ friend, friends, presence, mood, onBack }) {
   const { user } = useAuth();
   const { socket } = useSocket();
   const { startCall, callStatus } = useCall();
@@ -232,11 +232,22 @@ export default function ChatWindow({ friend, friends, presence, mood }) {
   return (
     <div className="flex h-full min-w-0 flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.03] px-4 py-3 backdrop-blur-xl">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.03] px-3 py-3 backdrop-blur-xl">
+        <div className="flex min-w-0 items-center gap-2">
+          {onBack && (
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={onBack}
+              title="Back"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white/60 transition hover:bg-white/10 hover:text-white md:hidden"
+            >
+              <ArrowLeft size={19} />
+            </motion.button>
+          )}
           <Avatar user={{ ...friend, isOnline }} size={40} showStatus />
-          <div>
-            <p className="font-medium text-white">
+          <div className="min-w-0">
+            <p className="truncate font-medium text-white">
               {friend.username}
               <MoodBadge mood={mood} />
             </p>

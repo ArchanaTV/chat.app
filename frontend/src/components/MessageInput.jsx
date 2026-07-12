@@ -45,10 +45,15 @@ export default function MessageInput({ onSend, onSchedule, onTyping, replyTo, on
   };
 
   const handleFilePick = async (e) => {
-    const file = e.target.files[0];
+    const files = Array.from(e.target.files || []);
     e.target.value = "";
-    if (!file) return;
-    await uploadAndSend(file);
+    if (files.length === 0) return;
+    // Upload+send one at a time (rather than all at once) so the messages
+    // land in a sensible order and we don't overwhelm the connection with
+    // many simultaneous uploads.
+    for (const file of files) {
+      await uploadAndSend(file);
+    }
   };
 
   const uploadAndSend = async (fileOrBlob, forcedType) => {
@@ -181,7 +186,7 @@ export default function MessageInput({ onSend, onSchedule, onTyping, replyTo, on
         >
           <Paperclip size={18} />
         </motion.button>
-        <input ref={fileInputRef} type="file" className="hidden" onChange={handleFilePick} />
+        <input ref={fileInputRef} type="file" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.zip" className="hidden" onChange={handleFilePick} />
 
         <motion.button
           whileHover={{ scale: 1.15 }}

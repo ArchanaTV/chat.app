@@ -31,7 +31,7 @@ export default function CallModal({ friends }) {
   const remoteVideoRef = useRef(null);
   const remoteAudioRef = useRef(null);
   const [duration, setDuration] = useState(0);
-  const [speakerOn, setSpeakerOn] = useState(true);
+  const [speakerOn, setSpeakerOn] = useState(false);
   const [outputDevices, setOutputDevices] = useState([]);
   const [showOutputPicker, setShowOutputPicker] = useState(false);
 
@@ -70,12 +70,19 @@ export default function CallModal({ friends }) {
   useEffect(() => {
     if (callStatus !== "active" || !navigator.mediaDevices?.enumerateDevices) return;
     navigator.mediaDevices.enumerateDevices().then((devices) => {
-      setOutputDevices(devices.filter((d) => d.kind === "audiooutput"));
+      const outputs = devices.filter((d) => d.kind === "audiooutput");
+      setOutputDevices(outputs);
+      // Default to the earpiece (quiet) output rather than the loud
+      // speaker, matching "off unless I turn it on". Only works where the
+      // browser both exposes device labels and supports setSinkId.
+      const earpiece = outputs.find((d) => /ear/i.test(d.label));
+      if (earpiece) selectOutput(earpiece.deviceId, false);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [callStatus]);
 
-  const selectOutput = async (deviceId) => {
-    setShowOutputPicker(false);
+  const selectOutput = async (deviceId, closePicker = true) => {
+    if (closePicker) setShowOutputPicker(false);
     const target = callType === "video" ? remoteVideoRef.current : remoteAudioRef.current;
     if (target?.setSinkId) {
       try {
@@ -84,6 +91,18 @@ export default function CallModal({ friends }) {
         /* unsupported on this browser/platform */
       }
     }
+  };
+
+  const toggleSpeaker = () => {
+    const next = !speakerOn;
+    setSpeakerOn(next);
+    const speakerDevice = outputDevices.find((d) => /speaker/i.test(d.label));
+    const earpieceDevice = outputDevices.find((d) => /ear/i.test(d.label));
+    if (next && speakerDevice) selectOutput(speakerDevice.deviceId, false);
+    else if (!next && earpieceDevice) selectOutput(earpieceDevice.deviceId, false);
+    // On browsers/platforms without labeled output devices (most mobile
+    // Safari, some Android setups), this toggle is visual-only - actual
+    // hardware audio routing on a website has real, honest limits.
   };
 
   if (callStatus === "idle") return null;
@@ -240,7 +259,7 @@ export default function CallModal({ friends }) {
                 />
               )}
               <CallButton
-                onClick={() => setSpeakerOn((s) => !s)}
+                onClick={toggleSpeaker}
                 color={speakerOn ? "active" : "glass"}
                 icon={speakerOn ? <Volume2 size={18} /> : <Speaker size={18} />}
                 small

@@ -33,6 +33,7 @@ export const CallProvider = ({ children }) => {
   const pendingCandidatesRef = useRef([]);
   const incomingOfferRef = useRef(null);
   const localStreamRef = useRef(null); // avoids stale closures in cleanup
+  const callStartTimeRef = useRef(null);
 
   useEffect(() => {
     localStreamRef.current = localStream;
@@ -52,6 +53,7 @@ export const CallProvider = ({ children }) => {
     setError("");
     pendingCandidatesRef.current = [];
     incomingOfferRef.current = null;
+    callStartTimeRef.current = null;
 
     if (reason) {
       setEndedReason(reason);
@@ -153,6 +155,7 @@ export const CallProvider = ({ children }) => {
       await pc.setLocalDescription(answer);
 
       socket?.emit("call:answer", { to: from, answer });
+      callStartTimeRef.current = Date.now();
       setCallStatus("active");
     } catch (err) {
       setError("Couldn't access camera/microphone");
@@ -162,17 +165,27 @@ export const CallProvider = ({ children }) => {
 
   const rejectCall = useCallback(() => {
     if (incomingOfferRef.current) {
-      socket?.emit("call:reject", { to: incomingOfferRef.current.from });
+      const { from, callType: type } = incomingOfferRef.current;
+      socket?.emit("call:reject", { to: from });
+      socket?.emit("call:log", { to: from, callType: type, duration: 0, outcome: "declined" });
     }
     cleanup();
   }, [socket, cleanup]);
 
   const endCall = useCallback(() => {
     if (remoteUser) {
-      socket?.emit(callStatus === "calling" ? "call:cancel" : "call:end", { to: remoteUser._id });
+      const wasActive = callStatus === "active";
+      socket?.emit(wasActive ? "call:end" : "call:cancel", { to: remoteUser._id });
+      const duration = callStartTimeRef.current ? Math.round((Date.now() - callStartTimeRef.current) / 1000) : 0;
+      socket?.emit("call:log", {
+        to: remoteUser._id,
+        callType,
+        duration,
+        outcome: wasActive ? "completed" : "cancelled",
+      });
     }
     cleanup("You ended the call");
-  }, [socket, remoteUser, callStatus, cleanup]);
+  }, [socket, remoteUser, callStatus, callType, cleanup]);
 
   const toggleMute = useCallback(() => {
     localStream?.getAudioTracks().forEach((t) => (t.enabled = muted));
@@ -221,6 +234,7 @@ export const CallProvider = ({ children }) => {
         await pcRef.current.addIceCandidate(new RTCIceCandidate(candidate));
       }
       pendingCandidatesRef.current = [];
+      callStartTimeRef.current = Date.now();
       setCallStatus("active");
     };
 

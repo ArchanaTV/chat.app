@@ -116,15 +116,13 @@ export default function Chat() {
 
       <div className={`${activeFriend ? "flex" : "hidden md:flex"} h-full min-w-0 flex-1 overflow-hidden md:rounded-2xl md:border md:border-white/10 md:bg-white/[0.04] md:shadow-2xl md:backdrop-blur-xl`}>
         {activeFriend ? (
-          <div className="flex h-full w-full flex-col">
-            <button
-              onClick={() => setActiveFriend(null)}
-              className="border-b border-white/10 bg-white/[0.02] px-4 py-2 text-left text-sm text-indigo-300 md:hidden"
-            >
-              ← Back
-            </button>
-            <ChatWindow friend={activeFriend} friends={friends} presence={presence} mood={moods[activeFriend._id] ?? activeFriend.mood} />
-          </div>
+          <ChatWindow
+            friend={activeFriend}
+            friends={friends}
+            presence={presence}
+            mood={moods[activeFriend._id] ?? activeFriend.mood}
+            onBack={() => setActiveFriend(null)}
+          />
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-white/30">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400/10 to-sky-400/10">

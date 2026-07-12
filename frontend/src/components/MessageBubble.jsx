@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { format } from "date-fns";
 import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
-import { Reply, FileText, Check, CheckCheck, Copy, Forward, Trash2 } from "lucide-react";
+import { Reply, FileText, Check, CheckCheck, Copy, Forward, Trash2, X, Phone, Video } from "lucide-react";
 import { resolveMediaUrl } from "../utils/media.js";
 
 const REACTION_CHOICES = ["👍", "❤️", "😂", "😮", "😢", "🎉"];
@@ -39,6 +39,7 @@ export default function MessageBubble({ message, isOwn, onReply, onDelete, onRea
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const x = useMotionValue(0);
   const replyIconOpacity = useTransform(x, [0, SWIPE_REPLY_THRESHOLD], [0, 1]);
@@ -88,6 +89,10 @@ export default function MessageBubble({ message, isOwn, onReply, onDelete, onRea
         </div>
       </div>
     );
+  }
+
+  if (message.type === "call") {
+    return <CallLogRow message={message} isOwn={isOwn} />;
   }
 
   const bubbleClasses = isOwn
@@ -201,7 +206,13 @@ export default function MessageBubble({ message, isOwn, onReply, onDelete, onRea
               {message.type === "text" || message.type === "emoji" ? (
                 <p className="whitespace-pre-wrap break-words text-sm">{message.text}</p>
               ) : message.type === "image" ? (
-                <img src={resolveMediaUrl(message.fileUrl)} alt="shared" className="max-h-64 rounded-lg object-cover" draggable={false} />
+                <img
+                  src={resolveMediaUrl(message.fileUrl)}
+                  alt="shared"
+                  onClick={() => setLightboxOpen(true)}
+                  className="max-h-64 cursor-pointer rounded-lg object-cover transition hover:brightness-90"
+                  draggable={false}
+                />
               ) : message.type === "video" ? (
                 <video src={resolveMediaUrl(message.fileUrl)} controls className="max-h-64 rounded-lg" />
               ) : message.type === "audio" || message.type === "voice" ? (
@@ -298,8 +309,80 @@ export default function MessageBubble({ message, isOwn, onReply, onDelete, onRea
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Full-screen image lightbox */}
+      <AnimatePresence>
+        {lightboxOpen && message.type === "image" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setLightboxOpen(false)}
+            className="fixed inset-0 z-[150] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"
+          >
+            <button
+              onClick={() => setLightboxOpen(false)}
+              className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+            >
+              <X size={20} />
+            </button>
+            <motion.img
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              onClick={(e) => e.stopPropagation()}
+              src={resolveMediaUrl(message.fileUrl)}
+              alt="shared"
+              className="max-h-[90vh] max-w-full rounded-lg object-contain"
+            />
+            <a
+              href={resolveMediaUrl(message.fileUrl)}
+              download
+              onClick={(e) => e.stopPropagation()}
+              className="absolute bottom-6 rounded-full bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20"
+            >
+              Download
+            </a>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
+}
+
+function CallLogRow({ message, isOwn }) {
+  const isVideo = message.callType === "video";
+  const Icon = isVideo ? Video : Phone;
+
+  const label = {
+    completed: `${isVideo ? "Video" : "Voice"} call · ${formatDuration(message.callDuration)}`,
+    missed: `Missed ${isVideo ? "video" : "voice"} call`,
+    declined: `${isOwn ? "Call declined" : "You declined"}`,
+    cancelled: isOwn ? "You cancelled the call" : "Missed call",
+  }[message.callOutcome] || "Call";
+
+  const isMissedStyle = message.callOutcome === "missed" || (message.callOutcome === "cancelled" && !isOwn);
+
+  return (
+    <div className="flex justify-center px-3 py-1.5">
+      <div
+        className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${
+          isMissedStyle
+            ? "border-red-400/20 bg-red-400/5 text-red-300/80"
+            : "border-white/10 bg-white/[0.04] text-white/50"
+        }`}
+      >
+        <Icon size={13} />
+        <span>{label}</span>
+        <span className="text-white/25">· {format(new Date(message.createdAt), "h:mm a")}</span>
+      </div>
+    </div>
+  );
+}
+
+function formatDuration(seconds) {
+  const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
+  const ss = String(seconds % 60).padStart(2, "0");
+  return `${mm}:${ss}`;
 }
 
 function MenuItem({ icon, label, onClick, danger }) {

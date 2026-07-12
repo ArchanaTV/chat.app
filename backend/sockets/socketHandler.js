@@ -144,6 +144,32 @@ export const initSocket = (io) => {
       io.to(to).emit("call:cancelled", { from: userId });
     });
 
+    // ---- Call log ----
+    // Whoever ends/declines a call (the one taking the explicit action) is
+    // responsible for logging it - the passive side just reacts to the
+    // signaling event and doesn't log its own copy, so each call produces
+    // exactly one entry, visible to both people, appearing like a normal
+    // chat message in the conversation.
+    socket.on("call:log", async ({ to, callType, duration, outcome }) => {
+      try {
+        const conversationId = buildConversationId(userId, to);
+        const message = await Message.create({
+          sender: userId,
+          receiver: to,
+          conversationId,
+          type: "call",
+          callType,
+          callDuration: duration,
+          callOutcome: outcome,
+        });
+        const populated = await message.populate("sender", "username avatarUrl");
+        io.to(to).emit("message:new", populated);
+        io.to(userId).emit("message:new", populated);
+      } catch (err) {
+        // Non-critical - a failed log shouldn't crash the call flow
+      }
+    });
+
     // ---- Delete message (real-time notify) ----
     socket.on("message:delete", ({ messageId, receiverId, forEveryone }) => {
       io.to(receiverId).emit("message:deleted", { messageId, forEveryone });
