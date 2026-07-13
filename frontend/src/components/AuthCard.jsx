@@ -1,4 +1,5 @@
 import AmbientGlowBackground from "./AmbientGlowBackground.jsx";
+import Logo from "./Logo.jsx";
 
 // Shared dark-glass shell for Login and Register: ambient glowing background,
 // a frosted glass card with a subtle border and soft shadow. No mascot —
@@ -9,6 +10,9 @@ export default function AuthCard({ title, subtitle, children }) {
       <AmbientGlowBackground />
 
       <div className="relative w-full max-w-sm">
+        <div className="mb-6 flex justify-center">
+          <Logo size={40} />
+        </div>
         <div
           className="animate-fade-in rounded-3xl border border-white/10 p-8 shadow-2xl backdrop-blur-xl"
           style={{ background: "rgba(255,255,255,0.06)" }}

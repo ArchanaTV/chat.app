@@ -122,6 +122,10 @@ export default function Chat() {
             presence={presence}
             mood={moods[activeFriend._id] ?? activeFriend.mood}
             onBack={() => setActiveFriend(null)}
+            onRelationshipChanged={() => {
+              loadFriends();
+              setActiveFriend(null);
+            }}
           />
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-white/30">

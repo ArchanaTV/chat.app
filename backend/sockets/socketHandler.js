@@ -2,6 +2,20 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import Message, { buildConversationId } from "../models/Message.js";
 
+// Two people can only message or call each other if they're friends AND
+// neither has blocked the other. This is the real enforcement point -
+// unfriending or blocking someone actually cuts off messaging/calling,
+// not just hides the button in the UI.
+async function canInteract(userAId, userBId) {
+  const [userA, userB] = await Promise.all([User.findById(userAId), User.findById(userBId)]);
+  if (!userA || !userB) return false;
+  const areFriends = userA.friends.some((f) => f.toString() === userBId);
+  const blocked =
+    userA.blockedUsers.some((b) => b.toString() === userBId) ||
+    userB.blockedUsers.some((b) => b.toString() === userAId);
+  return areFriends && !blocked;
+}
+
 // Maps a userId -> Set of socket ids (a user can have multiple tabs/devices open)
 const onlineUsers = new Map();
 
@@ -47,6 +61,12 @@ export const initSocket = (io) => {
     socket.on("message:send", async (payload, ack) => {
       try {
         const { receiverId, type = "text", text = "", fileUrl = "", fileName = "", fileSize = 0, replyTo = null } = payload;
+
+        if (!(await canInteract(userId, receiverId))) {
+          ack?.({ status: "error", error: "You can no longer message this person" });
+          return;
+        }
+
         const conversationId = buildConversationId(userId, receiverId);
 
         const message = await Message.create({
@@ -120,7 +140,11 @@ export const initSocket = (io) => {
     // on a call; the actual audio/video travels directly between their
     // browsers (peer-to-peer) once the connection is established - the
     // server never sees or touches the media itself.
-    socket.on("call:invite", ({ to, callType, offer }) => {
+    socket.on("call:invite", async ({ to, callType, offer }) => {
+      if (!(await canInteract(userId, to))) {
+        socket.emit("call:rejected", { from: to, reason: "not-allowed" });
+        return;
+      }
       io.to(to).emit("call:incoming", { from: userId, callType, offer });
     });
 

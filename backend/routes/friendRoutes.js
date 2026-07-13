@@ -92,4 +92,27 @@ router.delete("/:userId", protect, async (req, res) => {
   res.json({ message: "Unfriended" });
 });
 
+// POST /api/friends/block/:userId - block a user (also unfriends both ways)
+router.post("/block/:userId", protect, async (req, res) => {
+  const targetId = req.params.userId;
+  await User.findByIdAndUpdate(req.userId, {
+    $addToSet: { blockedUsers: targetId },
+    $pull: { friends: targetId },
+  });
+  await User.findByIdAndUpdate(targetId, { $pull: { friends: req.userId } });
+  res.json({ message: "Blocked" });
+});
+
+// POST /api/friends/unblock/:userId
+router.post("/unblock/:userId", protect, async (req, res) => {
+  await User.findByIdAndUpdate(req.userId, { $pull: { blockedUsers: req.params.userId } });
+  res.json({ message: "Unblocked" });
+});
+
+// GET /api/friends/blocked - list of users I've blocked
+router.get("/blocked", protect, async (req, res) => {
+  const user = await User.findById(req.userId).populate("blockedUsers", "username avatarUrl");
+  res.json({ blocked: user.blockedUsers });
+});
+
 export default router;

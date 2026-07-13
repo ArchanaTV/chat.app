@@ -153,4 +153,16 @@ router.get("/unread/count", protect, async (req, res) => {
   res.json({ unread });
 });
 
+// DELETE /api/messages/:friendId/clear - clear the whole conversation, for
+// me only. The other person keeps their own copy of the history, and we
+// stay friends - this only hides messages from my own view.
+router.delete("/:friendId/clear", protect, async (req, res) => {
+  const conversationId = buildConversationId(req.userId, req.params.friendId);
+  await Message.updateMany(
+    { conversationId },
+    { $addToSet: { deletedFor: req.userId } }
+  );
+  res.json({ message: "Chat cleared" });
+});
+
 export default router;

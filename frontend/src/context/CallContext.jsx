@@ -250,7 +250,8 @@ export const CallProvider = ({ children }) => {
       }
     };
 
-    const handleRejected = () => cleanup("Call declined");
+    const handleRejected = ({ reason } = {}) =>
+      cleanup(reason === "not-allowed" ? "You can no longer call this person" : "Call declined");
     const handleEnded = () => cleanup("Call ended");
     const handleCancelled = () => cleanup("Missed call");
 

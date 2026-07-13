@@ -12,8 +12,9 @@ import TypingIndicator from "./TypingIndicator.jsx";
 import HeartBurst, { isHeartOnlyMessage } from "./HeartBurst.jsx";
 import { MoodBadge } from "./MoodBubble.jsx";
 import ForwardModal from "./ForwardModal.jsx";
+import ChatOptionsMenu from "./ChatOptionsMenu.jsx";
 
-export default function ChatWindow({ friend, friends, presence, mood, onBack }) {
+export default function ChatWindow({ friend, friends, presence, mood, onBack, onRelationshipChanged }) {
   const { user } = useAuth();
   const { socket } = useSocket();
   const { startCall, callStatus } = useCall();
@@ -296,6 +297,11 @@ export default function ChatWindow({ friend, friends, presence, mood, onBack }) 
           >
             <Search size={17} />
           </motion.button>
+          <ChatOptionsMenu
+            friend={friend}
+            onChatCleared={() => setMessages([])}
+            onRelationshipChanged={onRelationshipChanged}
+          />
         </div>
       </div>
 

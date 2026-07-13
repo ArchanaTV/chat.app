@@ -9,6 +9,9 @@ const userSchema = new mongoose.Schema(
     avatarUrl: { type: String, default: "" },
     mood: { type: String, enum: ["happy", "sleepy", "chill", null], default: null },
     friends: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    // Users this person has blocked - blocking prevents messaging and
+    // calling in both directions, checked whichever way the relationship runs.
+    blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     isOnline: { type: Boolean, default: false },
     lastSeen: { type: Date, default: Date.now },
   },
