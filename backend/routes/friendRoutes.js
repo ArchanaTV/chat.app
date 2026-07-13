@@ -25,7 +25,16 @@ router.post("/request/:userId", protect, async (req, res) => {
     });
     if (existing) return res.status(409).json({ message: "Friend request already pending" });
 
-    const request = await FriendRequest.create({ from: req.userId, to });
+    // If these two have a history together (an old accepted/rejected
+    // request from a previous friendship, before an unfriend or block),
+    // reuse and reset that record instead of creating a new one - a
+    // second document for the same (from, to) pair would collide with
+    // the unique index below.
+    const request = await FriendRequest.findOneAndUpdate(
+      { from: req.userId, to },
+      { from: req.userId, to, status: "pending" },
+      { upsert: true, new: true }
+    );
     const populated = await request.populate("from to", "username avatarUrl");
     res.status(201).json({ request: populated });
   } catch (err) {
