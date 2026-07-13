@@ -233,7 +233,7 @@ export default function ChatWindow({ friend, friends, presence, mood, onBack, on
   return (
     <div className="flex h-full min-w-0 flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/10 bg-white/[0.03] px-3 py-3 backdrop-blur-xl">
+      <div className="relative z-20 flex items-center justify-between border-b border-white/10 bg-white/[0.03] px-3 py-3 backdrop-blur-xl">
         <div className="flex min-w-0 items-center gap-2">
           {onBack && (
             <motion.button

@@ -68,7 +68,7 @@ export default function ChatOptionsMenu({ friend, onChatCleared, onRelationshipC
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 8 }}
               transition={{ duration: 0.15 }}
-              className="absolute right-0 top-11 z-50 w-52 overflow-hidden rounded-2xl border border-white/10 bg-gray-900/95 py-1 shadow-2xl backdrop-blur-xl"
+              className="absolute right-0 top-11 z-[60] w-52 overflow-hidden rounded-2xl border border-white/10 bg-gray-900/95 py-1 shadow-2xl backdrop-blur-xl"
             >
               <MenuRow
                 icon={<Trash2 size={15} />}
