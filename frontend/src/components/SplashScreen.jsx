@@ -59,7 +59,7 @@ export default function SplashScreen({ onDone }) {
         {/* abstract glowing logo mark */}
         <motion.div
           className="relative mb-5 flex h-20 w-20 items-center justify-center rounded-3xl"
-          style={{ background: "linear-gradient(135deg, #6366f1, #38bdf8)" }}
+          style={{ background: "linear-gradient(135deg, var(--accent-from), var(--accent-to))" }}
           initial={{ opacity: 0, scale: 0.5 }}
           animate={{
             opacity: 1,

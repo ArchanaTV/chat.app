@@ -14,6 +14,13 @@ const userSchema = new mongoose.Schema(
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     isOnline: { type: Boolean, default: false },
     lastSeen: { type: Date, default: Date.now },
+    // Privacy preferences - these genuinely change what other people can
+    // see/receive, enforced on the backend, not just a cosmetic toggle.
+    privacy: {
+      showLastSeen: { type: Boolean, default: true },
+      showReadReceipts: { type: Boolean, default: true },
+      showTypingIndicator: { type: Boolean, default: true },
+    },
   },
   { timestamps: true }
 );

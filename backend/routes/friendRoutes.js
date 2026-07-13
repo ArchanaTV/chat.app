@@ -80,9 +80,17 @@ router.get("/requests", protect, async (req, res) => {
 router.get("/", protect, async (req, res) => {
   const user = await User.findById(req.userId).populate(
     "friends",
-    "username avatarUrl isOnline lastSeen mood"
+    "username avatarUrl isOnline lastSeen mood privacy"
   );
-  res.json({ friends: user.friends });
+  // Respect each friend's own "show last seen" preference - if they've
+  // turned it off, we simply don't send that field to anyone.
+  const friends = user.friends.map((f) => {
+    const obj = f.toObject();
+    if (obj.privacy?.showLastSeen === false) obj.lastSeen = null;
+    delete obj.privacy;
+    return obj;
+  });
+  res.json({ friends });
 });
 
 // DELETE /api/friends/:userId - unfriend

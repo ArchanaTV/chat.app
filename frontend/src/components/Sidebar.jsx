@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import Avatar from "./Avatar.jsx";
 import SearchUsers from "./SearchUsers.jsx";
 import FriendRequests from "./FriendRequests.jsx";
 import FriendsList from "./FriendsList.jsx";
 import ProfileEdit from "./ProfileEdit.jsx";
+import SettingsPage from "./SettingsPage.jsx";
 import Logo from "./Logo.jsx";
 
 const TABS = [
@@ -19,6 +20,7 @@ export default function Sidebar({ friends, activeFriend, onSelect, unreadCounts,
   const { user, logout } = useAuth();
   const [tab, setTab] = useState("friends");
   const [editOpen, setEditOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <div
@@ -41,6 +43,15 @@ export default function Sidebar({ friends, activeFriend, onSelect, unreadCounts,
           <span className="font-medium text-white">{user.username}</span>
         </motion.button>
         <div className="flex items-center gap-2">
+          <motion.button
+            whileHover={{ scale: 1.1, rotate: 20 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setSettingsOpen(true)}
+            title="Settings"
+            className="flex h-9 w-9 items-center justify-center rounded-full text-white/60 transition hover:bg-white/10 hover:text-white"
+          >
+            <Settings size={16} />
+          </motion.button>
           <motion.button
             whileHover={{ scale: 1.1, rotate: -8 }}
             whileTap={{ scale: 0.9 }}
@@ -113,6 +124,17 @@ export default function Sidebar({ friends, activeFriend, onSelect, unreadCounts,
       </div>
 
       <AnimatePresence>{editOpen && <ProfileEdit onClose={() => setEditOpen(false)} />}</AnimatePresence>
+      <AnimatePresence>
+        {settingsOpen && (
+          <SettingsPage
+            onClose={() => setSettingsOpen(false)}
+            onOpenProfile={() => {
+              setSettingsOpen(false);
+              setEditOpen(true);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -32,3 +32,37 @@ body {
 ::-webkit-scrollbar-thumb {
   @apply bg-gray-300 dark:bg-gray-700 rounded-full;
 }
+
+:root {
+  --accent-from: #6366f1;
+  --accent-to: #38bdf8;
+}
+
+/* Reduce Motion: genuinely disables/shortens animations app-wide rather
+   than just being a label - respects the actual accessibility setting. */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
+/* Larger Text: scales up base font size app-wide. */
+.larger-text {
+  font-size: 112.5%;
+}
+
+/* High Contrast: boosts text/border contrast against the dark background. */
+.high-contrast {
+  --tw-text-opacity: 1 !important;
+}
+.high-contrast .text-white\/50,
+.high-contrast .text-white\/40,
+.high-contrast .text-white\/35,
+.high-contrast .text-white\/30 {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+.high-contrast .border-white\/10 {
+  border-color: rgba(255, 255, 255, 0.35) !important;
+}

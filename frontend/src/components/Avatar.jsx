@@ -13,7 +13,7 @@ export default function Avatar({ user, size = 40, showStatus = false }) {
       ) : (
         <div
           className="flex h-full w-full items-center justify-center rounded-full font-semibold text-white"
-          style={{ fontSize: size * 0.35, background: "linear-gradient(135deg, #6366f1, #38bdf8)" }}
+          style={{ fontSize: size * 0.35, background: "linear-gradient(135deg, var(--accent-from), var(--accent-to))" }}
         >
           {initials}
         </div>

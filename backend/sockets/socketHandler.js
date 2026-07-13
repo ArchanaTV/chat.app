@@ -94,10 +94,14 @@ export const initSocket = (io) => {
     });
 
     // ---- Typing indicator ----
-    socket.on("typing:start", ({ receiverId }) => {
+    socket.on("typing:start", async ({ receiverId }) => {
+      const me = await User.findById(userId).select("privacy").lean();
+      if (me?.privacy?.showTypingIndicator === false) return;
       io.to(receiverId).emit("typing:update", { userId, isTyping: true });
     });
-    socket.on("typing:stop", ({ receiverId }) => {
+    socket.on("typing:stop", async ({ receiverId }) => {
+      const me = await User.findById(userId).select("privacy").lean();
+      if (me?.privacy?.showTypingIndicator === false) return;
       io.to(receiverId).emit("typing:update", { userId, isTyping: false });
     });
 
@@ -108,6 +112,11 @@ export const initSocket = (io) => {
         { conversationId, receiver: userId, seen: false },
         { seen: true, seenAt: new Date() }
       );
+      // Only tell the sender their message was seen if I have read
+      // receipts turned on - the message is still marked seen internally
+      // either way (for my own unread counts), just not broadcast to them.
+      const me = await User.findById(userId).select("privacy").lean();
+      if (me?.privacy?.showReadReceipts === false) return;
       io.to(friendId).emit("message:seenUpdate", { by: userId, conversationId });
     });
 

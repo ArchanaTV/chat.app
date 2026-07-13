@@ -194,7 +194,7 @@ export default function MessageBubble({ message, isOwn, onReply, onDelete, onRea
                 e.preventDefault();
                 setMenuOpen(true);
               }}
-              style={{ x, background: isOwn ? "linear-gradient(135deg, #6366f1, #38bdf8)" : undefined }}
+              style={{ x, background: isOwn ? "linear-gradient(135deg, var(--accent-from), var(--accent-to))" : undefined }}
               className={`cursor-grab rounded-2xl px-4 py-2 shadow-md active:cursor-grabbing ${bubbleClasses}`}
             >
               {message.replyTo && (

@@ -52,4 +52,19 @@ router.get("/:id", protect, async (req, res) => {
   res.json({ user });
 });
 
+// PUT /api/users/me/privacy - update privacy preferences (last seen, read
+// receipts, typing indicator). These genuinely change what other people
+// can see - enforced in the friends list / message routes / socket handler,
+// not just stored and ignored.
+router.put("/me/privacy", protect, async (req, res) => {
+  const { showLastSeen, showReadReceipts, showTypingIndicator } = req.body;
+  const update = {};
+  if (typeof showLastSeen === "boolean") update["privacy.showLastSeen"] = showLastSeen;
+  if (typeof showReadReceipts === "boolean") update["privacy.showReadReceipts"] = showReadReceipts;
+  if (typeof showTypingIndicator === "boolean") update["privacy.showTypingIndicator"] = showTypingIndicator;
+
+  const user = await User.findByIdAndUpdate(req.userId, update, { new: true });
+  res.json({ user });
+});
+
 export default router;

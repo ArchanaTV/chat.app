@@ -8,7 +8,7 @@ export default function Logo({ size = 32, showText = true, className = "" }) {
     <div className={`flex items-center gap-2 ${className}`}>
       <div
         className="flex shrink-0 items-center justify-center rounded-xl"
-        style={{ width: size, height: size, background: "linear-gradient(135deg, #6366f1, #38bdf8)" }}
+        style={{ width: size, height: size, background: "linear-gradient(135deg, var(--accent-from), var(--accent-to))" }}
       >
         <svg width={size * 0.55} height={size * 0.55} viewBox="0 0 24 24" fill="none">
           <path

@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useSocket } from "./SocketContext.jsx";
 import { useAuth } from "./AuthContext.jsx";
+import { useSettings } from "./SettingsContext.jsx";
 import { playRingback, playIncomingRingtone, playEndTone, stopAll } from "../utils/callSounds.js";
 
 const CallContext = createContext(null);
@@ -15,6 +16,12 @@ const ICE_SERVERS = [{ urls: "stun:stun.l.google.com:19302" }];
 export const CallProvider = ({ children }) => {
   const { socket } = useSocket();
   const { user } = useAuth();
+  const { settings } = useSettings();
+
+  const audioConstraints = {
+    echoCancellation: settings?.echoCancellation !== false,
+    noiseSuppression: settings?.noiseCancellation !== false,
+  };
 
   // idle -> calling (outgoing) -> active -> ended -> idle
   // idle -> ringing (incoming) -> active -> ended -> idle
@@ -110,7 +117,7 @@ export const CallProvider = ({ children }) => {
         playRingback();
 
         const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
+          audio: audioConstraints,
           video: type === "video",
         });
         setLocalStream(stream);
@@ -127,7 +134,7 @@ export const CallProvider = ({ children }) => {
         setTimeout(() => cleanup(), 1500);
       }
     },
-    [socket, createPeerConnection, cleanup]
+    [socket, createPeerConnection, cleanup, audioConstraints]
   );
 
   // ---- Accept an incoming call ----
@@ -137,7 +144,7 @@ export const CallProvider = ({ children }) => {
     const { from, offer, callType: type } = incomingOfferRef.current;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
+        audio: audioConstraints,
         video: type === "video",
       });
       setLocalStream(stream);
@@ -161,7 +168,7 @@ export const CallProvider = ({ children }) => {
       setError("Couldn't access camera/microphone");
       setTimeout(() => cleanup(), 1500);
     }
-  }, [socket, createPeerConnection, cleanup]);
+  }, [socket, createPeerConnection, cleanup, audioConstraints]);
 
   const rejectCall = useCallback(() => {
     if (incomingOfferRef.current) {

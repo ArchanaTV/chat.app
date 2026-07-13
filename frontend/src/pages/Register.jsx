@@ -83,7 +83,7 @@ export default function Register() {
         <button
           disabled={loading}
           className="w-full rounded-xl py-3 font-medium text-white shadow-lg transition hover:brightness-110 disabled:opacity-60"
-          style={{ background: "linear-gradient(135deg, #6366f1, #38bdf8)" }}
+          style={{ background: "linear-gradient(135deg, var(--accent-from), var(--accent-to))" }}
         >
           {loading ? "Creating account..." : "Sign Up"}
         </button>

@@ -107,7 +107,7 @@ export default function ProfileEdit({ onClose }) {
                   ? "ring-2 ring-indigo-400"
                   : "border border-white/10 bg-white/5 hover:bg-white/10"
               }`}
-              style={mood === m.key ? { background: "linear-gradient(135deg, #6366f1, #38bdf8)" } : undefined}
+              style={mood === m.key ? { background: "linear-gradient(135deg, var(--accent-from), var(--accent-to))" } : undefined}
             >
               {m.emoji}
             </motion.button>
@@ -124,7 +124,7 @@ export default function ProfileEdit({ onClose }) {
             onClick={save}
             disabled={saving}
             className="rounded-xl px-4 py-2 text-sm font-medium text-white shadow-lg disabled:opacity-60"
-            style={{ background: "linear-gradient(135deg, #6366f1, #38bdf8)" }}
+            style={{ background: "linear-gradient(135deg, var(--accent-from), var(--accent-to))" }}
           >
             {saving ? "Saving..." : "Save"}
           </motion.button>

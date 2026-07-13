@@ -75,7 +75,7 @@ export default function SearchUsers() {
                   style={{
                     background: sentTo.has(u._id)
                       ? "rgba(255,255,255,0.1)"
-                      : "linear-gradient(135deg, #6366f1, #38bdf8)",
+                      : "linear-gradient(135deg, var(--accent-from), var(--accent-to))",
                   }}
                 >
                   {sentTo.has(u._id) ? (

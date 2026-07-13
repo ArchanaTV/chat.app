@@ -139,7 +139,7 @@ export default function MessageInput({ onSend, onSchedule, onTyping, replyTo, on
                 onClick={submitSchedule}
                 disabled={!text.trim() || !scheduleTime}
                 className="rounded-full px-3 py-1 font-medium text-white disabled:opacity-40"
-                style={{ background: "linear-gradient(135deg, #6366f1, #38bdf8)" }}
+                style={{ background: "linear-gradient(135deg, var(--accent-from), var(--accent-to))" }}
               >
                 Schedule
               </button>
@@ -217,7 +217,7 @@ export default function MessageInput({ onSend, onSchedule, onTyping, replyTo, on
           onClick={submitText}
           disabled={!text.trim()}
           className="flex h-9 w-9 items-center justify-center rounded-full text-white shadow-lg transition disabled:opacity-30"
-          style={{ background: "linear-gradient(135deg, #6366f1, #38bdf8)" }}
+          style={{ background: "linear-gradient(135deg, var(--accent-from), var(--accent-to))" }}
         >
           <Send size={15} />
         </motion.button>
