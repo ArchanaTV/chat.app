@@ -13,6 +13,7 @@ import HeartBurst, { isHeartOnlyMessage } from "./HeartBurst.jsx";
 import { MoodBadge } from "./MoodBubble.jsx";
 import ForwardModal from "./ForwardModal.jsx";
 import ChatOptionsMenu from "./ChatOptionsMenu.jsx";
+import SmartReplies from "./SmartReplies.jsx";
 
 export default function ChatWindow({ friend, friends, presence, mood, onBack, onRelationshipChanged }) {
   const { user } = useAuth();
@@ -30,6 +31,7 @@ export default function ChatWindow({ friend, friends, presence, mood, onBack, on
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const bottomRef = useRef(null);
+  const messageInputRef = useRef(null);
   const scrollContainerRef = useRef(null);
   const shouldAutoScrollRef = useRef(true);
 
@@ -388,7 +390,15 @@ export default function ChatWindow({ friend, friends, presence, mood, onBack, on
 
       <AnimatePresence>{isTyping && <TypingIndicator username={friend.username} />}</AnimatePresence>
 
+      <SmartReplies
+        friendId={friend._id}
+        lastMessage={messages[messages.length - 1]}
+        currentUserId={user._id}
+        onSelect={(text) => messageInputRef.current?.insertText(text)}
+      />
+
       <MessageInput
+        ref={messageInputRef}
         onSend={send}
         onSchedule={scheduleSend}
         onTyping={handleTypingChange}

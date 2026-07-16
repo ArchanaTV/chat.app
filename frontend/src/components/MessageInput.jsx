@@ -1,10 +1,11 @@
-import { useRef, useState } from "react";
+import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import EmojiPicker from "emoji-picker-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Smile, Paperclip, Clock, Send, X } from "lucide-react";
 import api from "../api/axios.js";
 import { useTheme } from "../context/ThemeContext.jsx";
 import VoiceRecorder from "./VoiceRecorder.jsx";
+import AIWritingAssist from "./AIWritingAssist.jsx";
 
 const MEDIA_TYPE_BY_MIME = (mime) => {
   if (mime.startsWith("image/")) return "image";
@@ -13,9 +14,13 @@ const MEDIA_TYPE_BY_MIME = (mime) => {
   return "document";
 };
 
-export default function MessageInput({ onSend, onSchedule, onTyping, replyTo, onCancelReply }) {
+const MessageInput = forwardRef(function MessageInput({ onSend, onSchedule, onTyping, replyTo, onCancelReply }, ref) {
   const { theme } = useTheme();
   const [text, setText] = useState("");
+
+  useImperativeHandle(ref, () => ({
+    insertText: (value) => setText(value),
+  }));
   const [showEmoji, setShowEmoji] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -200,6 +205,8 @@ export default function MessageInput({ onSend, onSchedule, onTyping, replyTo, on
           <Clock size={18} />
         </motion.button>
 
+        <AIWritingAssist text={text} onApply={(newText) => setText(newText)} />
+
         <input
           value={text}
           onChange={handleChange}
@@ -224,4 +231,6 @@ export default function MessageInput({ onSend, onSchedule, onTyping, replyTo, on
       </div>
     </div>
   );
-}
+});
+
+export default MessageInput;
